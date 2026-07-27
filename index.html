@@ -1224,9 +1224,9 @@ ${ogTags}
     88%{opacity:var(--peakOpacity, 0.8);}
     100%{transform:translateY(112vh) translateX(-18px) rotate(360deg); opacity:0;}
   }
-  .stage{perspective:1800px;position:fixed;inset:3px;z-index:3;}
+  .stage{perspective:1800px;position:absolute;inset:0;z-index:3;}
   .page-layer{position:absolute;inset:0;background:#ffffff;border-radius:9px;overflow:hidden;
-    transform-style:preserve-3d;transform-origin:${originSide} bottom;backface-visibility:hidden;will-change:transform;
+    transform-style:preserve-3d;transform-origin:${originSide} center;backface-visibility:hidden;will-change:transform;
     box-shadow:-3px 5px 12px rgba(0,0,0,0.16), 0 1px 5px rgba(0,0,0,0.10);}
   .page-layer img{width:100%;height:100%;object-fit:contain;display:block;background:#fff;}
   .page-layer::after{content:"";position:absolute;top:0;bottom:0;${originSide}:0;width:20px;
@@ -1250,15 +1250,8 @@ ${ogTags}
     70%{opacity:.7;transform:scale(.85) translate(-2px,-2px);}
     100%{opacity:0;transform:scale(.3) translate(-4px,-4px);}
   }
-  .page-counter-overlay{
-    position:fixed;bottom:10px;left:10px;z-index:20;
-    background:rgba(20,20,24,0.55);color:#F5F6F8;
-    padding:4px 10px;border-radius:6px;
-    font-size:11px;font-weight:600;backdrop-filter:blur(4px);
-    pointer-events:none;
-  }
   .nav-overlay{
-    position:fixed;bottom:8px;left:50%;transform:translateX(-50%);z-index:20;
+    position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:20;
     display:flex;align-items:center;gap:10px;
   }
   .nav{width:28px;height:28px;border-radius:50%;background:transparent;border:none;
@@ -1267,14 +1260,25 @@ ${ogTags}
     box-shadow:0 0 8px 2px rgba(91,141,239,0.45), 0 0 2px 0 #8AB0F5;}
   .nav:disabled{cursor:not-allowed;}
   .nav:disabled .dot{opacity:.3;box-shadow:none;}
-  .grid-toggle-btn{
-    position:fixed;top:10px;left:10px;z-index:20;
-    width:30px;height:30px;border-radius:7px;
-    background:rgba(20,20,24,0.45);border:1px solid rgba(255,255,255,0.15);
-    color:#F5F6F8;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;backdrop-filter:blur(4px);
+  .bottom-bar{
+    position:fixed;bottom:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(0,0,0,0.32), transparent);
+    pointer-events:none;
   }
-  .grid-toggle-btn:active{transform:scale(0.94);}
+  .bottom-bar-counter{
+    color:#fff;font-size:11.5px;font-weight:600;
+    background:rgba(20,20,24,0.55);padding:4px 10px;border-radius:6px;
+    backdrop-filter:blur(4px);pointer-events:none;
+  }
+  .bottom-bar-grid{
+    width:28px;height:28px;border-radius:7px;
+    background:rgba(20,20,24,0.55);border:1px solid rgba(255,255,255,0.15);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;backdrop-filter:blur(4px);pointer-events:auto;
+  }
+  .bottom-bar-grid:active{transform:scale(0.94);}
   .pages-grid-overlay{
     position:fixed;inset:0;z-index:50;background:rgba(10,10,12,0.95);
     overflow-y:auto;padding:14px;display:none;
@@ -1289,21 +1293,26 @@ ${ogTags}
   .pages-grid .pg-item img{width:100%;display:block;background:#fff;}
   .pages-grid .pg-num{position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.6);color:#fff;
     font-size:9px;padding:1px 5px;border-radius:4px;}
+  .zoom-wrap{position:fixed;inset:3px;z-index:3;transform-origin:50% 50%;touch-action:none;}
 </style></head><body>
 <div class="confetti-layer" id="confettiLayer"></div>
-<button class="grid-toggle-btn" id="gridToggleBtn" title="כל העמודים">
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-  </svg>
-</button>
-<div class="stage" id="s"><div class="drag-zone" id="dz"></div>
-  <div class="corner-hint"><span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span><span class="spark s4"></span></div>
+<div class="zoom-wrap" id="zoomWrap">
+  <div class="stage" id="s"><div class="drag-zone" id="dz"></div>
+    <div class="corner-hint"><span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span><span class="spark s4"></span></div>
+  </div>
 </div>
-<div class="page-counter-overlay" id="c">1/1</div>
 <div class="nav-overlay">
   <button class="nav" id="p"><span class="dot"></span></button>
   <button class="nav" id="n"><span class="dot"></span></button>
+</div>
+<div class="bottom-bar">
+  <div class="bottom-bar-counter" id="c">1/1</div>
+  <button class="bottom-bar-grid" id="gridToggleBtn" title="כל העמודים">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  </button>
 </div>
 <div class="pages-grid-overlay" id="pagesGridOverlay">
   <div class="pages-grid" id="pagesGrid"></div>
@@ -1316,6 +1325,13 @@ const isLTR = ${isLTR};
 let i=0, flipping=false;
 const stage=document.getElementById('s'), counter=document.getElementById('c'), dz=document.getElementById('dz');
 const pBtn=document.getElementById('p'), nBtn=document.getElementById('n');
+const zoomWrap=document.getElementById('zoomWrap');
+let zoomScale=1, panX=0, panY=0;
+let panMode=false, panStartX=0, panStartY=0, panOrigX=0, panOrigY=0;
+let lastTapTime=0, lastTapX=0, lastTapY=0;
+function applyZoomTransform(){
+  zoomWrap.style.transform = \`scale(\${zoomScale}) translate(\${panX}px, \${panY}px)\`;
+}
 setTimeout(()=>{ try{ window.scrollTo(0,1); }catch(e){} }, 300);
 
 function makeLayer(idx){
@@ -1343,16 +1359,16 @@ function next(){ if(flipping||i>=pages.length-1)return; flipping=true;
   const under=makeLayer(i+1); stage.insertBefore(under, top);
   const hingeSign = isLTR ? -1 : 1;
   top.style.transition='transform 1s cubic-bezier(.4,0,.2,1)';
-  requestAnimationFrame(()=>{top.style.transform=\`rotateY(\${hingeSign*115}deg) rotateX(-9deg)\`;});
+  requestAnimationFrame(()=>{top.style.transform=\`rotateY(\${hingeSign*115}deg)\`;});
   setTimeout(()=>{top.remove();i++;updateControls();dismissCornerHint();flipping=false;},850); }
 function prev(){ if(flipping||i<=0)return; flipping=true;
   const current=stage.querySelector('.page-layer');
   const returning=makeLayer(i-1);
   const hingeSign = isLTR ? -1 : 1;
-  returning.style.transform=\`rotateY(\${hingeSign*115}deg) rotateX(-9deg)\`;
+  returning.style.transform=\`rotateY(\${hingeSign*115}deg)\`;
   returning.style.transition='transform 1s cubic-bezier(.4,0,.2,1)';
   stage.appendChild(returning);
-  requestAnimationFrame(()=>{returning.style.transform='rotateY(0deg) rotateX(0deg)';});
+  requestAnimationFrame(()=>{returning.style.transform='rotateY(0deg)';});
   setTimeout(()=>{current.remove();i--;updateControls();dismissCornerHint();flipping=false;},850); }
 nBtn.onclick=next; pBtn.onclick=prev;
 document.addEventListener('keydown',e=>{
@@ -1379,17 +1395,33 @@ function applyDragFrame(){
   const progress=getDragProgress();
   const shade=Math.sin(Math.min(progress,1)*Math.PI)*0.8;
   const hingeSign = isLTR ? -1 : 1;
-  const tilt = -9 * progress;
   if(dir==='fwd'){
-    topL.style.transform=\`rotateY(\${hingeSign*progress*115}deg) rotateX(\${tilt}deg)\`;
+    topL.style.transform=\`rotateY(\${hingeSign*progress*115}deg)\`;
     topL.style.setProperty('--shadeOpacity', shade.toFixed(3));
   } else {
-    underL.style.transform=\`rotateY(\${hingeSign*115*(1-progress)}deg) rotateX(\${-9*(1-progress)}deg)\`;
+    underL.style.transform=\`rotateY(\${hingeSign*115*(1-progress)}deg)\`;
     underL.style.setProperty('--shadeOpacity', shade.toFixed(3));
   }
 }
 dz.addEventListener('pointerdown', e=>{
   if(flipping) return;
+  const now = Date.now();
+  const isDoubleTap = (now - lastTapTime < 320) && Math.abs(e.clientX-lastTapX)<40 && Math.abs(e.clientY-lastTapY)<40;
+  lastTapTime = isDoubleTap ? 0 : now;
+  lastTapX = e.clientX; lastTapY = e.clientY;
+  if(isDoubleTap){
+    if(zoomScale > 1){ zoomScale = 1; panX = 0; panY = 0; }
+    else { zoomScale = 2.4; panX = 0; panY = 0; }
+    applyZoomTransform();
+    return;
+  }
+  if(zoomScale > 1){
+    panMode = true;
+    panStartX = e.clientX; panStartY = e.clientY;
+    panOrigX = panX; panOrigY = panY;
+    try{ dz.setPointerCapture(e.pointerId); }catch(err){}
+    return;
+  }
   dragActive=true; startX=e.clientX; curX=e.clientX;
   dir = isInCorner(e.clientX, e.clientY) ? null : 'blocked';
   topL=stage.querySelector('.page-layer'); underL=null;
@@ -1397,6 +1429,12 @@ dz.addEventListener('pointerdown', e=>{
   try{ dz.setPointerCapture(e.pointerId); }catch(err){}
 });
 dz.addEventListener('pointermove', e=>{
+  if(panMode){
+    panX = panOrigX + (e.clientX - panStartX) / zoomScale;
+    panY = panOrigY + (e.clientY - panStartY) / zoomScale;
+    applyZoomTransform();
+    return;
+  }
   if(!dragActive || dir==='blocked') return;
   curX=e.clientX;
   const dx=curX-startX;
@@ -1411,7 +1449,7 @@ dz.addEventListener('pointermove', e=>{
     } else {
       if(i<=0){dir='none';return;}
       dir='back'; underL=makeLayer(i-1);
-      underL.style.transform = \`rotateY(\${(isLTR?-1:1)*115}deg) rotateX(-9deg)\`;
+      underL.style.transform = \`rotateY(\${(isLTR?-1:1)*115}deg)\`;
       stage.appendChild(underL);
     }
   }
@@ -1420,6 +1458,7 @@ dz.addEventListener('pointermove', e=>{
   if(!rafPending){ rafPending=true; requestAnimationFrame(applyDragFrame); }
 });
 function endDrag(){
+  if(panMode){ panMode=false; return; }
   if(!dragActive) return;
   dragActive=false;
   if(dir==='blocked'||dir===null||dir==='none'){
@@ -1438,19 +1477,19 @@ function endDrag(){
   if(direction==='fwd'){
     top.style.transition='transform .4s cubic-bezier(.4,0,.2,1)';
     if(progress>0.18){
-      requestAnimationFrame(()=>{top.style.transform=\`rotateY(\${hingeSign*115}deg) rotateX(-9deg)\`;});
+      requestAnimationFrame(()=>{top.style.transform=\`rotateY(\${hingeSign*115}deg)\`;});
       setTimeout(()=>{top.remove(); i++; updateControls(); dismissCornerHint(); flipping=false;},330);
     } else {
-      requestAnimationFrame(()=>{top.style.transform='rotateY(0deg) rotateX(0deg)'; top.style.setProperty('--shadeOpacity','0');});
+      requestAnimationFrame(()=>{top.style.transform='rotateY(0deg)'; top.style.setProperty('--shadeOpacity','0');});
       setTimeout(()=>{under.remove(); top.style.transition=''; flipping=false;},330);
     }
   } else {
     under.style.transition='transform .4s cubic-bezier(.4,0,.2,1)';
     if(progress>0.18){
-      requestAnimationFrame(()=>{ under.style.transform='rotateY(0deg) rotateX(0deg)'; });
+      requestAnimationFrame(()=>{ under.style.transform='rotateY(0deg)'; });
       setTimeout(()=>{top.remove(); i--; updateControls(); dismissCornerHint(); flipping=false;},330);
     } else {
-      requestAnimationFrame(()=>{ under.style.transform=\`rotateY(\${hingeSign*115}deg) rotateX(-9deg)\`; under.style.setProperty('--shadeOpacity','0'); });
+      requestAnimationFrame(()=>{ under.style.transform=\`rotateY(\${hingeSign*115}deg)\`; under.style.setProperty('--shadeOpacity','0'); });
       setTimeout(()=>{under.remove(); flipping=false;},330);
     }
   }
