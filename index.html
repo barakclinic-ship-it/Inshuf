@@ -468,6 +468,7 @@
     </div>
     <div class="action-bar">
       <button class="action-btn primary" id="htmlBtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/></svg> צור HTML</button>
+      <button class="action-btn secondary" id="copyHtmlBtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg> העתק HTML</button>
     </div>
   </div>
 
@@ -789,7 +790,8 @@ function handleFile(file){
   bookTitle = file.name.replace(/\.pdf$/i,'');
   setReadyVisuals();
   renderFileCards();
-  setStatus('הקובץ עלה, מוכן ליצירה');
+  setStatus('הקובץ עלה, יוצר ספר אוטומטית...');
+  startConversion();
 }
 
 function renderSavedBooksList(){
@@ -1564,10 +1566,12 @@ render();
 </body></html>`;
 }
 
-function downloadStandalone(){
+function getStandaloneHtmlString(){
   const imgUrl = (currentBookEntry && currentBookEntry.ogImageUrl) ? currentBookEntry.ogImageUrl : shareOgImageUrl;
-  const html = buildStandaloneHtml(shareBgColor, shareConfettiTypes, shareTitleColor, customConfettiEmojis, imgUrl);
-  return new Blob([html], {type:'text/html'});
+  return buildStandaloneHtml(shareBgColor, shareConfettiTypes, shareTitleColor, customConfettiEmojis, imgUrl);
+}
+function downloadStandalone(){
+  return new Blob([getStandaloneHtmlString()], {type:'text/html'});
 }
 
 /* ---------- Share modal ---------- */
@@ -1748,6 +1752,7 @@ function openShareModal(action){
 }
 
 document.getElementById('htmlBtn').addEventListener('click', ()=> openShareModal('embed'));
+document.getElementById('copyHtmlBtn').addEventListener('click', ()=> openShareModal('copy'));
 
 document.getElementById('shareCancelBtn').addEventListener('click', ()=>{
   shareModal.classList.remove('active');
@@ -1777,6 +1782,17 @@ document.getElementById('shareConfirmBtn').addEventListener('click', async ()=>{
       toast('הקישור הועתק — אפשר להדביק אותו בוואטסאפ');
     }catch(err){
       toast('הקישור: ' + hostedUrl);
+    }
+    return;
+  }
+
+  if(pendingShareAction === 'copy'){
+    const htmlString = getStandaloneHtmlString();
+    try{
+      await navigator.clipboard.writeText(htmlString);
+      toast('כל קוד ה-HTML הועתק — ניתן להדביק ישירות בתיבת "הטמעת קוד" בגוגל סייטס');
+    }catch(err){
+      toast('שגיאה בהעתקה — נסו את כפתור "צור HTML" במקום');
     }
     return;
   }
