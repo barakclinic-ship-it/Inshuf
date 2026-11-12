@@ -189,9 +189,46 @@ input[type=range]{accent-color:var(--acc);width:100%}
 .loading.show{display:grid}
 .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--acc);animation:sp .8s linear infinite;margin:0 auto 12px}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media (min-width:900px){
+/* pull-tab / swipe sheets */
+.sheet.dragging{transition:none}
+.sheet .grip{cursor:grab;touch-action:none;padding:8px 0;margin:2px auto 0;background-clip:content-box;height:20px;width:60px}
+#tsheet.peek{transform:translateY(calc(100% - 52px - var(--safe-b)))}
+#tsheet.peek .bd{visibility:hidden}
+#tsheet .peekTx{display:none;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;color:var(--mut)}
+#tsheet.peek .peekTx{display:block}
+#tsheet.peek #tTitle,#tsheet.peek #tLang{display:none}
+#tsheet.peek .hd{cursor:pointer}
+/* word bubble */
+#bubble{position:fixed;z-index:44;width:min(320px,88vw);background:var(--bg2);color:var(--tx);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 34px rgba(15,23,42,.22);padding:10px 12px 8px;opacity:0;transform:scale(.96);transform-origin:var(--ax,50%) var(--ay,100%);transition:opacity .15s,transform .15s;pointer-events:none}
+#bubble.show{opacity:1;transform:none;pointer-events:auto}
+#bubble::after{content:"";position:absolute;left:calc(var(--ax,50%) - 8px);width:14px;height:14px;background:var(--bg2);border:1px solid var(--line);transform:rotate(45deg)}
+#bubble.up::after{bottom:-8px;border-top:0;border-left:0}
+#bubble.down::after{top:-8px;border-bottom:0;border-right:0}
+#bubble .bw{font-size:12.5px;color:var(--mut);direction:auto;unicode-bidi:plaintext;text-align:start}
+#bubble .bt{font-size:calc(var(--tfs) + 1px);font-weight:650;line-height:1.4;margin:3px 0 4px}
+#bubble .alt{font-size:13px;margin:0 0 4px}
+#bubble .brow{display:flex;gap:4px;align-items:center;margin-top:4px;border-top:1px solid var(--line);padding-top:6px}
+#bubble .brow .sp{flex:1}
+#bubble .iconbtn{width:34px;height:34px}
+#bubble .btn.sm{padding:6px 10px;font-size:13px}
+@media (min-width:900px) and (min-height:561px){
   #tsheet{right:auto;left:16px;bottom:16px;width:420px;border-radius:18px;max-height:70vh;border:1px solid var(--line)}
+  #tsheet.peek{transform:translateY(calc(100% - 52px))}
   body.tsheet-open #asBar{bottom:calc(16px + var(--safe-b))}
+}
+/* phone in landscape: translation becomes a side panel */
+@media (orientation:landscape) and (max-height:560px){
+  #tsheet{left:auto;right:0;top:0;bottom:0;margin:0;width:min(44vw,420px);max-height:none;border-radius:18px 0 0 18px;border:1px solid var(--line);transform:translateX(105%);padding-top:var(--safe-t)}
+  #tsheet.open{transform:none}
+  #tsheet.peek{transform:translateX(calc(100% - 40px))}
+  #tsheet.peek .hd{flex-direction:column;align-items:flex-start}
+  #tsheet .grip{display:none}
+  #tsheet .out{font-size:calc(var(--tfs) - 2px)}
+  body.tsheet-open #pages{padding-right:min(44vw,420px)}
+  body.tsheet-open #asBar{bottom:calc(16px + var(--safe-b))}
+  .sheet{max-height:94vh}
+  header{padding-top:calc(4px + var(--safe-t));padding-bottom:4px}
+  #tools{padding:3px 8px}
 }
 </style>
 </head>
@@ -232,7 +269,9 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div id="docs"></div>
     <div class="tips">
       <b>איך זה עובד?</b><br>
-      • <b>הקשה על משפט</b> — מסמנת אותו ומתרגמת. החצים עוברים למשפט הבא/הקודם.<br>• <b>מילה בודדת</b> — הכפתור הראשון בסרגל מחליף ל"הקשה = מילה", עם פירושים נוספים מהמילון.<br>
+      • <b>הקשה על מילה</b> — בלון קטן עם התרגום והפירושים. משם אפשר להרחיב ל"משפט" או "פסקה".<br>
+      • <b>הקשה כפולה</b> — מתרגמת את כל הפסקה. החצים עוברים לפסקה הבאה/הקודמת.<br>
+      • <b>חלונות</b> — מחליקים למטה כדי להוריד. חלון התרגום נשאר כלשונית קטנה שאפשר לשלוף בחזרה.<br>
       • <b>סימון חופשי</b> — לחיצה ארוכה וגרירה, ואז "תרגם סימון".<br>
       • <b>אופליין</b> — בהגדרות מורידים פעם אחת מודל תרגום למכשיר (או משתמשים בתרגום המובנה של כרום במחשב). כל משפט שכבר תורגם נשמר ונגיש תמיד.
     </div>
@@ -250,7 +289,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div class="pg"><input id="pgIn" type="number" inputmode="numeric" min="1"><span id="pgTot">/ 1</span></div>
   </header>
   <div id="tools">
-    <button class="tbtn on" id="tapBtn"><svg class="i" viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10a2 2 0 0 1 4 0v2M17 11a2 2 0 0 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-3l-3-5a2 2 0 0 1 3.4-2L9 13"/></svg><span id="tapLbl">הקשה = משפט</span></button>
+    <button class="tbtn on" id="tapBtn"><svg class="i" viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10a2 2 0 0 1 4 0v2M17 11a2 2 0 0 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-3l-3-5a2 2 0 0 1 3.4-2L9 13"/></svg><span id="tapLbl">הקשה לתרגום</span></button>
     <button class="tbtn" id="pageTrBtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h7M7.5 3v2M5 13c2-1.5 4-4 4.5-8M6 9c1 2 3 3.5 5 4M13 21l4-9 4 9M14.5 18h5"/></svg>תרגם עמוד</button>
     <button class="tbtn" id="zoomOut" aria-label="הקטנה"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></svg></button>
     <button class="tbtn" id="zoomFit">התאמה</button>
@@ -281,6 +320,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
   <div class="grip"></div>
   <div class="hd">
     <h3 id="tTitle">תרגום</h3>
+    <span class="peekTx" id="peekTx"></span>
     <span class="eng" id="tLang"></span>
     <button class="iconbtn" id="tClose" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
@@ -293,7 +333,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
       <div class="trow">
         <button class="btn ghost sm" id="tPrev" title="המשפט הקודם">‹ קודם</button>
         <button class="btn sm" id="tNext" title="המשפט הבא">הבא ›</button>
-        <button class="btn ghost sm" id="tCtx" hidden>כל המשפט</button>
+        <button class="btn ghost sm" id="tCtx" hidden>כל הפסקה</button>
         <span class="sp"></span>
         <button class="iconbtn" id="tSpeak" title="הקראת המקור"><svg class="i" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
         <button class="iconbtn" id="tCopy" title="העתקה"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
@@ -301,6 +341,19 @@ input[type=range]{accent-color:var(--acc);width:100%}
       </div>
     </div>
     <div id="tPage" class="plist" hidden></div>
+  </div>
+</div>
+
+<div id="bubble" dir="rtl">
+  <div class="bw" id="bWord"></div>
+  <div class="bt" id="bTr"></div>
+  <div id="bAlts"></div>
+  <div class="brow">
+    <button class="iconbtn" id="bSpeak" title="הקראה"><svg class="i" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+    <button class="iconbtn" id="bSave" title="שמירה במחברת"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button>
+    <span class="sp"></span>
+    <button class="btn ghost sm" id="bSent">משפט</button>
+    <button class="btn ghost sm" id="bPara">פסקה</button>
   </div>
 </div>
 
@@ -708,7 +761,15 @@ function wordAt(t, pos) {
   while (e > s && /['’\u00AD-]/.test(t[e - 1])) e--;
   return [s, e];
 }
-const unitAt = (t, pos, unit = S.unit) => unit === 'word' ? wordAt(t, pos) : sentenceAt(t, pos);
+function paraAt(t, pos) {
+  pos = Math.max(0, Math.min(pos, t.length - 1));
+  let s = t.lastIndexOf('\n', pos - 1) + 1, e = t.indexOf('\n', pos); if (e < 0) e = t.length;
+  if (t[pos] === '\n') { s = t.lastIndexOf('\n', pos - 1) + 1; e = pos; }
+  while (s < e && /\s/.test(t[s])) s++;
+  while (e > s && /\s/.test(t[e - 1])) e--;
+  return [s, e];
+}
+const unitAt = (t, pos, unit = 'sentence') => unit === 'word' ? wordAt(t, pos) : unit === 'para' ? paraAt(t, pos) : sentenceAt(t, pos);
 const cleanText = s => s.replace(/[-‐]­/g, '').replace(/­/g, '').replace(/\s+/g, ' ').trim();
 function sentencesOf(t) {
   const out = []; let i = 0;
@@ -771,9 +832,10 @@ pagesEl.addEventListener('click', e => {
   const target = e.target;
   const onText = target.tagName === 'SPAN' && target.closest('.textLayer') && /\S/.test(target.textContent);
   if (!S.tap || !onText) {
-    // tap on margins / blank space: close translation, or toggle full-screen reading
+    // tap on margins / blank space: close bubble / translation, or toggle full-screen reading
     if (onText) return;
-    if ($('#tsheet').classList.contains('open')) { closeT(); R.cur = null; }
+    if (bubbleOpen()) { hideBubble(); clearHL(); R.cur = null; }
+    else if ($('#tsheet').classList.contains('open')) { peekT(); }
     else setFocus(!document.body.classList.contains('focus'));
     return;
   }
@@ -784,9 +846,77 @@ pagesEl.addEventListener('click', e => {
   let off = offsetFromNode(p, c.node, c.offset);
   if (off < 0) return;
   if (off >= p.text.length) off = p.text.length - 1;
-  selectSentence(p, off);
+  const now = Date.now();
+  if (TAP.last && now - TAP.last.t < 320 && Math.hypot(e.clientX - TAP.last.x, e.clientY - TAP.last.y) < 30) {
+    clearTimeout(TAP.timer); TAP.last = null;
+    try { getSelection().removeAllRanges(); } catch (err) {}
+    selectSentence(p, off, false, 'para');
+    return;
+  }
+  TAP.last = { t: now, x: e.clientX, y: e.clientY };
+  clearTimeout(TAP.timer);
+  TAP.timer = setTimeout(() => { TAP.last = null; showWord(p, off); }, 290);
 });
-function selectSentence(p, off, scroll = false, unit = S.unit) {
+const TAP = { last: null, timer: 0 };
+pagesEl.addEventListener('dblclick', () => { try { getSelection().removeAllRanges(); } catch (err) {} });
+
+/* ---------- word bubble ---------- */
+let bReq = 0, bRes = null;
+const bubble = $('#bubble');
+const bubbleOpen = () => bubble.classList.contains('show');
+function hideBubble() { bubble.classList.remove('show'); bReq++; }
+function placeBubble(rect) {
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight, vw = innerWidth, top0 = pagesEl.getBoundingClientRect().top;
+  const cx = rect.left + rect.width / 2;
+  let left = Math.max(8, Math.min(vw - bw - 8, cx - bw / 2));
+  const up = rect.top - bh - 14 > top0;
+  bubble.classList.toggle('up', up); bubble.classList.toggle('down', !up);
+  bubble.style.left = left + 'px';
+  bubble.style.top = (up ? rect.top - bh - 12 : rect.bottom + 12) + 'px';
+  bubble.style.setProperty('--ax', Math.max(18, Math.min(bw - 18, cx - left)) + 'px');
+  bubble.style.setProperty('--ay', up ? '100%' : '0%');
+}
+async function showWord(p, off) {
+  const [s, e] = wordAt(p.text, off);
+  if (e <= s) return;
+  const text = cleanText(p.text.slice(s, e)); if (!text) return;
+  peekT();
+  R.cur = { p, s, e, text, unit: 'word' };
+  clearHL(); drawHL(p, s, e);
+  const hlEl = p.wrap.querySelector('.hlLayer i'); if (!hlEl) return;
+  const my = ++bReq;
+  const [sl, tl] = pair(text);
+  $('#bWord').textContent = text;
+  $('#bTr').innerHTML = '<div class="shimmer" style="width:60%;margin:6px 0"></div>';
+  $('#bTr').dir = RTL.has(tl) ? 'rtl' : 'ltr';
+  $('#bAlts').innerHTML = '';
+  bubble.classList.add('show');
+  placeBubble(hlEl.getBoundingClientRect());
+  try {
+    const r = await translate(text);
+    if (my !== bReq) return;
+    $('#bTr').textContent = r.text;
+    $('#bAlts').innerHTML = (r.alts || []).slice(0, 3).map(a => `<div class="alt" dir="${RTL.has(r.t) ? 'rtl' : 'ltr'}"><b>${esc(POS[a.pos] || a.pos || '')}</b> ${a.terms.slice(0, 4).map(esc).join(' · ')}</div>`).join('');
+    bRes = { src: text, tr: r.text, s: r.s, t: r.t };
+  } catch (err) {
+    if (my !== bReq) return;
+    $('#bTr').innerHTML = `<span class="bad" style="font-size:13px;font-weight:500">${esc(errMsg().split('\n')[0])}</span>`;
+    bRes = null;
+  }
+  placeBubble(hlEl.getBoundingClientRect());
+}
+$('#bSent').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'sentence'); };
+$('#bPara').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'para'); };
+$('#bSpeak').onclick = () => { if (bRes) speak(bRes.src); };
+$('#bSave').onclick = async () => { if (!bRes) return; await dbPut('notes', { ...bRes, doc: R.rec ? R.rec.name : '', page: R.cur ? R.cur.p.n : R.curPage, at: Date.now() }); toast('נשמר במחברת ⭐'); };
+let bScroll0 = 0;
+pagesEl.addEventListener('scroll', () => {
+  if (!bubbleOpen() || !R.cur) return;
+  const hlEl = R.cur.p.wrap.querySelector('.hlLayer i');
+  if (hlEl) placeBubble(hlEl.getBoundingClientRect());
+}, { passive: true });
+function selectSentence(p, off, scroll = false, unit = 'sentence') {
+  hideBubble();
   const [s, e] = unitAt(p.text, off, unit);
   if (e <= s) return;
   const text = cleanText(p.text.slice(s, e));
@@ -806,7 +936,7 @@ function selectSentence(p, off, scroll = false, unit = S.unit) {
 }
 async function stepSentence(dir) {
   const c = R.cur; if (!c) return;
-  const unit = c.unit || S.unit;
+  const unit = c.unit || 'sentence';
   const skip = unit === 'word' ? (ch => !/[\p{L}\p{N}]/u.test(ch)) : (ch => /\s/.test(ch));
   let p = c.p;
   if (dir > 0) {
@@ -885,7 +1015,7 @@ function setZoom(z, at) {
   const anchor = R.curPage;
   const rel = (() => { const p = R.pages[anchor - 1]; if (!p) return 0; return (pagesEl.scrollTop - p.wrap.offsetTop) / p.wrap.offsetHeight; })();
   const st = pagesEl.scrollTop, sl = pagesEl.scrollLeft;
-  R.cur = null; closeT();
+  R.cur = null; hideBubble(); clearHL();
   buildPages();
   if (at) {
     const k = S.zoom / old, top0 = R.inner.offsetTop;
@@ -1038,7 +1168,7 @@ function paintToggles() {
   b.style.setProperty('--pf', f || 'none');
   b.style.setProperty('--tfs', S.tfs + 'px');
   $('#tapBtn').classList.toggle('on', S.tap);
-  $('#tapLbl').textContent = !S.tap ? 'סימון חופשי' : S.unit === 'word' ? 'הקשה = מילה' : 'הקשה = משפט';
+  $('#tapLbl').textContent = S.tap ? 'הקשה לתרגום' : 'סימון חופשי';
   $('#tapChk').checked = S.tap;
   $('#tfsIn').value = S.tfs; $('#conIn').value = S.con; $('#briIn').value = S.bri; $('#spdIn').value = S.spd; $('#wakeChk').checked = S.wake;
   $$('#themes button').forEach(x => x.classList.toggle('on', x.dataset.t === S.theme));
@@ -1057,11 +1187,8 @@ $('#spdIn').oninput = e => { S.spd = +e.target.value; saveS(); paintSpeed(); };
 $('#wakeChk').onchange = e => { S.wake = e.target.checked; saveS(); syncWake(); };
 $('#viewReset').onclick = () => { Object.assign(S, { theme: 'white', con: 100, bri: 100, spd: 1, tfs: 20 }); saveS(); paintToggles(); };
 $('#tapBtn').onclick = () => {
-  if (!S.tap) { S.tap = true; S.unit = 'sentence'; }
-  else if (S.unit === 'sentence') S.unit = 'word';
-  else S.tap = false;
-  saveS(); paintToggles();
-  toast(!S.tap ? 'סימון חופשי: לחיצה ארוכה וגרירה' : S.unit === 'word' ? 'הקשה על מילה = תרגום המילה' : 'הקשה על טקסט = תרגום המשפט');
+  S.tap = !S.tap; saveS(); paintToggles();
+  toast(S.tap ? 'הקשה = מילה · הקשה כפולה = פסקה' : 'סימון חופשי: לחיצה ארוכה וגרירה');
 };
 $('#tapChk').onchange = e => { S.tap = e.target.checked; saveS(); paintToggles(); };
 $('#tfsIn').oninput = e => { S.tfs = +e.target.value; saveS(); paintToggles(); };
@@ -1315,14 +1442,57 @@ async function paintEngineStatus() {
 
 /* ================= translation sheet ================= */
 let tReq = 0, lastResult = null, lastAsked = '';
-function openT() { $('#tsheet').classList.add('open'); document.body.classList.add('tsheet-open'); if (AS.on) asPause(true); }
-function closeT() { $('#tsheet').classList.remove('open'); document.body.classList.remove('tsheet-open'); clearHL(); tReq++; }
-$('#tClose').onclick = () => { closeT(); R.cur = null; };
+function openT() { const t = $('#tsheet'); t.classList.remove('peek'); t.classList.add('open'); document.body.classList.add('tsheet-open'); if (AS.on) asPause(true); }
+function peekT() { const t = $('#tsheet'); if (!t.classList.contains('open')) return; t.classList.remove('open'); t.classList.add('peek'); document.body.classList.remove('tsheet-open'); $('#peekTx').textContent = lastResult ? lastResult.tr : ''; }
+function closeT() { $('#tsheet').classList.remove('open', 'peek'); document.body.classList.remove('tsheet-open'); hideBubble(); clearHL(); tReq++; }
+$('#tClose').onclick = e => { e.stopPropagation(); closeT(); R.cur = null; };
+$('#tsheet .hd').addEventListener('click', e => { if ($('#tsheet').classList.contains('peek') && !e.target.closest('#tClose')) openT(); });
+
+/* ---------- swipe to dismiss (every sheet); the translation sheet tucks into a pull tab ---------- */
+function swipeable(sheet, onDismiss, onOpen) {
+  let st = null;
+  const side = () => sheet.id === 'tsheet' && matchMedia('(orientation:landscape) and (max-height:560px)').matches;
+  sheet.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const bd = sheet.querySelector('.bd');
+    const inHandle = !!e.target.closest('.grip,.hd');
+    if (!inHandle && bd && bd.scrollTop > 2 && !side()) return;
+    if (e.target.closest('input[type=range],select')) return;
+    st = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), d: 0, axis: null, peek: sheet.classList.contains('peek') };
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (!st) return;
+    const dx = e.touches[0].clientX - st.x, dy = e.touches[0].clientY - st.y;
+    if (!st.axis) { if (Math.hypot(dx, dy) < 8) return; st.axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x'; }
+    const isSide = side();
+    const d = isSide ? (st.axis === 'x' ? dx : 0) : (st.axis === 'y' ? dy : 0);
+    if (st.peek) { st.d = d; return; }
+    if (d <= 0) { st.d = 0; return; }
+    e.preventDefault();
+    st.d = d; sheet.classList.add('dragging');
+    sheet.style.transform = isSide ? `translateX(${d}px)` : `translateY(${d}px)`;
+  }, { passive: false });
+  const end = () => {
+    if (!st) return;
+    const v = st.d / Math.max(1, Date.now() - st.t);
+    sheet.classList.remove('dragging'); sheet.style.transform = '';
+    if (st.peek) { if (st.d < -30) onOpen && onOpen(); else if (st.d > 30) onDismiss(true); }
+    else if (st.d > 90 || v > 0.6) onDismiss(false);
+    st = null;
+  };
+  sheet.addEventListener('touchend', end); sheet.addEventListener('touchcancel', end);
+}
+swipeable($('#tsheet'), full => { if (full) { closeT(); R.cur = null; } else peekT(); }, openT);
+['settings', 'notes', 'viewSheet', 'cleanSheet', 'iosSheet'].forEach(id => swipeable($('#' + id), () => closeSheets()));
 async function showTranslation(text) {
   const my = ++tReq; lastAsked = text;
   $('#tAlts').innerHTML = '';
-  $('#tCtx').hidden = !(R.cur && R.cur.unit === 'word');
-  $('#tSingle').hidden = false; $('#tPage').hidden = true; $('#tTitle').textContent = 'תרגום';
+  const u = R.cur ? R.cur.unit : 'sel';
+  $('#tCtx').hidden = u !== 'sentence';
+  $('#tSingle').hidden = false; $('#tPage').hidden = true;
+  $('#tTitle').textContent = u === 'para' ? 'תרגום פסקה' : u === 'sentence' ? 'תרגום משפט' : 'תרגום';
+  $('#tPrev').textContent = '‹ ' + (u === 'para' ? 'פסקה קודמת' : 'קודם'); $('#tNext').textContent = (u === 'para' ? 'פסקה הבאה' : 'הבא') + ' ›';
+  $('#tPrev').hidden = $('#tNext').hidden = !R.cur;
   $('#tSrc').textContent = text;
   const [s, t] = pair(text);
   $('#tLang').textContent = `${lname(s)} ← ${lname(t)}`;
@@ -1347,17 +1517,18 @@ async function showTranslation(text) {
   } finally { clearTimeout(slow); }
 }
 const POS = { noun: 'שם עצם', verb: 'פועל', adjective: 'תואר', adverb: 'תואר הפועל', preposition: 'מילת יחס', pronoun: 'כינוי', conjunction: 'מילת חיבור', interjection: 'קריאה', abbreviation: 'קיצור', phrase: 'ביטוי', article: 'יידוע', prefix: 'תחילית', suffix: 'סופית' };
-$('#tCtx').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'sentence'); };
+$('#tCtx').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'para'); };
 $('#tNext').onclick = () => stepSentence(1);
 $('#tPrev').onclick = () => stepSentence(-1);
 $('#tCopy').onclick = async () => { if (!lastResult) return; try { await navigator.clipboard.writeText(lastResult.tr); toast('התרגום הועתק'); } catch (e) { toast('לא הצלחתי להעתיק'); } };
-$('#tSpeak').onclick = () => {
-  const text = $('#tSrc').textContent; if (!text || !('speechSynthesis' in window)) return;
+function speak(text) {
+  if (!text || !('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const [s] = pair(text); u.lang = s === 'he' ? 'he-IL' : s; u.rate = 0.95;
   speechSynthesis.speak(u);
-};
+}
+$('#tSpeak').onclick = () => speak($('#tSrc').textContent);
 $('#tSave').onclick = async () => {
   if (!lastResult) return;
   await dbPut('notes', { ...lastResult, doc: R.rec ? R.rec.name : '', page: R.cur ? R.cur.p.n : R.curPage, at: Date.now() });
@@ -1416,6 +1587,7 @@ $('#notesExport').onclick = async () => {
 
 /* ================= sheets & views ================= */
 function openSheet(id) {
+  hideBubble();
   closeSheets(false);
   if (id === 'notes') renderNotes();
   if (id === 'settings') { fillSettings(); paintEngineStatus(); }
