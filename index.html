@@ -129,6 +129,8 @@ body.tsheet-open #asBar{bottom:calc(52vh + 10px)}
 #tsheet .src{font-size:14px;color:var(--mut);line-height:1.55;direction:auto;unicode-bidi:plaintext;text-align:start;padding:10px 12px;background:var(--card);border-radius:12px;max-height:22vh;overflow:auto}
 #tsheet .out{font-size:var(--tfs);line-height:1.6;margin:12px 2px 6px;min-height:1.6em;white-space:pre-wrap;color:var(--tx)}
 #tsheet .out.err{color:var(--bad);font-size:15px}
+.alt{font-size:14px;color:var(--mut);margin:2px 2px 8px;line-height:1.6}
+.alt b{color:var(--acc);font-weight:600;font-size:12px;margin-inline-end:4px}
 .eng{font-size:11.5px;color:var(--mut);display:flex;align-items:center;gap:6px}
 .eng b{color:var(--acc);font-weight:600}
 .trow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px}
@@ -227,7 +229,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div id="docs"></div>
     <div class="tips">
       <b>איך זה עובד?</b><br>
-      • <b>הקשה על משפט</b> — מסמנת אותו ומתרגמת. החצים בחלון התרגום עוברים למשפט הבא/הקודם.<br>
+      • <b>הקשה על משפט</b> — מסמנת אותו ומתרגמת. החצים עוברים למשפט הבא/הקודם.<br>• <b>מילה בודדת</b> — הכפתור הראשון בסרגל מחליף ל"הקשה = מילה", עם פירושים נוספים מהמילון.<br>
       • <b>סימון חופשי</b> — לחיצה ארוכה וגרירה, ואז "תרגם סימון".<br>
       • <b>אופליין</b> — בהגדרות מורידים פעם אחת מודל תרגום למכשיר (או משתמשים בתרגום המובנה של כרום במחשב). כל משפט שכבר תורגם נשמר ונגיש תמיד.
     </div>
@@ -245,7 +247,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div class="pg"><input id="pgIn" type="number" inputmode="numeric" min="1"><span id="pgTot">/ 1</span></div>
   </header>
   <div id="tools">
-    <button class="tbtn on" id="tapBtn"><svg class="i" viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10a2 2 0 0 1 4 0v2M17 11a2 2 0 0 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-3l-3-5a2 2 0 0 1 3.4-2L9 13"/></svg>הקשה = משפט</button>
+    <button class="tbtn on" id="tapBtn"><svg class="i" viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10a2 2 0 0 1 4 0v2M17 11a2 2 0 0 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-3l-3-5a2 2 0 0 1 3.4-2L9 13"/></svg><span id="tapLbl">הקשה = משפט</span></button>
     <button class="tbtn" id="pageTrBtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h7M7.5 3v2M5 13c2-1.5 4-4 4.5-8M6 9c1 2 3 3.5 5 4M13 21l4-9 4 9M14.5 18h5"/></svg>תרגם עמוד</button>
     <button class="tbtn" id="zoomOut" aria-label="הקטנה"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></svg></button>
     <button class="tbtn" id="zoomFit">התאמה</button>
@@ -282,10 +284,12 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div id="tSingle">
       <div class="src" id="tSrc"></div>
       <div class="out" id="tOut"></div>
+      <div id="tAlts"></div>
       <div class="eng" id="tEng"></div>
       <div class="trow">
         <button class="btn ghost sm" id="tPrev" title="המשפט הקודם">‹ קודם</button>
         <button class="btn sm" id="tNext" title="המשפט הבא">הבא ›</button>
+        <button class="btn ghost sm" id="tCtx" hidden>כל המשפט</button>
         <span class="sp"></span>
         <button class="iconbtn" id="tSpeak" title="הקראת המקור"><svg class="i" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
         <button class="iconbtn" id="tCopy" title="העתקה"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
@@ -321,14 +325,9 @@ input[type=range]{accent-color:var(--acc);width:100%}
     </div>
 
     <div class="box">
-      <h4>📦 מודל תרגום במכשיר</h4>
-      <p>NLLB‑200 — מודל תרגום פתוח שרץ כולו בתוך הדפדפן, גם בטלפון. הורדה חד־פעמית של כמה מאות MB (עדיף ב־Wi‑Fi). אחרי זה מתרגם בלי אינטרנט בכלל — קצת יותר לאט מאונליין.</p>
-      <div class="status" id="locStatus"></div>
-      <div class="prog" id="locProg"><i></i></div>
-      <div class="row">
-        <button class="btn sm" id="locDl">הורדת המודל</button>
-        <button class="btn ghost sm" id="locDel">מחיקה</button>
-      </div>
+      <h4>📦 תרגום במכשיר (בלי אינטרנט)</h4>
+      <p>מודלים פתוחים שרצים כולם בתוך הדפדפן. מורידים פעם אחת (עדיף ב־Wi‑Fi) ומאז מתרגם גם בטיסה.</p>
+      <div id="models"></div>
     </div>
 
     <div class="box">
@@ -340,7 +339,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     </div>
 
     <div class="fld">
-      <div class="trow2"><div>הקשה על טקסט מתרגמת משפט<small>כבוי = רק סימון חופשי</small></div><label class="sw"><input type="checkbox" id="tapChk"><span></span></label></div>
+      <div class="trow2"><div>הקשה על טקסט מתרגמת<small>כבוי = רק סימון חופשי. מילה/משפט — מהכפתור בסרגל</small></div><label class="sw"><input type="checkbox" id="tapChk"><span></span></label></div>
     </div>
     <div class="box">
       <h4>💾 נתונים</h4>
@@ -433,12 +432,18 @@ function detectLang(t) {
 }
 
 /* ================= settings ================= */
-const DEF = { src: 'auto', tgt: 'he', engine: 'auto', theme: 'white', con: 100, bri: 100, spd: 1, wake: true, tap: true, tfs: 20, zoom: 1, model: 'Xenova/nllb-200-distilled-600M', lastLatin: 'en' };
+const DEF = { src: 'auto', tgt: 'he', engine: 'auto', theme: 'white', con: 100, bri: 100, spd: 1, wake: true, tap: true, unit: 'sentence', tfs: 20, zoom: 1, model: 'Xenova/nllb-200-distilled-600M', lastLatin: 'en' };
 let S = { ...DEF };
 try { S = { ...DEF, ...JSON.parse(localStorage.getItem('inshuf.s') || '{}') }; } catch (e) {}
 const saveS = () => { try { localStorage.setItem('inshuf.s', JSON.stringify(S)); } catch (e) {} };
-const LOCAL_READY_KEY = 'inshuf.localReady';
-const localReady = () => { try { return localStorage.getItem(LOCAL_READY_KEY) === S.model; } catch (e) { return false; } };
+const MODELS = [
+  { key: 'enhe', id: 'sivelsguy/opus-mt-en-he-onnx', name: 'אנגלית ← עברית', size: 'כ־100MB · מהיר, מתאים לטלפון', pairs: ['en>he'] },
+  { key: 'nllb', id: 'Xenova/nllb-200-distilled-600M', name: 'כל השפות (NLLB‑200)', size: 'כ־900MB · כבד, מומלץ למחשב', pairs: null }
+];
+const readyKey = m => 'inshuf.ready.' + m.id;
+const isReady = m => { try { return localStorage.getItem(readyKey(m)) === '1'; } catch (e) { return false; } };
+const localReady = () => MODELS.some(isReady);
+function modelFor(s, t) { return MODELS.find(m => isReady(m) && (!m.pairs || m.pairs.includes(s + '>' + t))); }
 
 /* ================= IndexedDB ================= */
 const db = await new Promise((res, rej) => {
@@ -663,6 +668,19 @@ function sentenceAt(t, pos) {
   while (e > s && /\s/.test(t[e - 1])) e--;
   return [s, e];
 }
+const WORDCH = /[\p{L}\p{M}\p{N}'’\u05F3\u05F4\u00AD-]/u;
+function wordAt(t, pos) {
+  pos = Math.max(0, Math.min(pos, t.length - 1));
+  if (!WORDCH.test(t[pos]) && pos > 0 && WORDCH.test(t[pos - 1])) pos--;
+  if (!WORDCH.test(t[pos])) return [pos, pos];
+  let s = pos, e = pos;
+  while (s > 0 && WORDCH.test(t[s - 1])) s--;
+  while (e < t.length && WORDCH.test(t[e])) e++;
+  while (s < e && /['’-]/.test(t[s])) s++;
+  while (e > s && /['’\u00AD-]/.test(t[e - 1])) e--;
+  return [s, e];
+}
+const unitAt = (t, pos, unit = S.unit) => unit === 'word' ? wordAt(t, pos) : sentenceAt(t, pos);
 const cleanText = s => s.replace(/[-‐]­/g, '').replace(/­/g, '').replace(/\s+/g, ' ').trim();
 function sentencesOf(t) {
   const out = []; let i = 0;
@@ -740,12 +758,12 @@ pagesEl.addEventListener('click', e => {
   if (off >= p.text.length) off = p.text.length - 1;
   selectSentence(p, off);
 });
-function selectSentence(p, off, scroll = false) {
-  const [s, e] = sentenceAt(p.text, off);
+function selectSentence(p, off, scroll = false, unit = S.unit) {
+  const [s, e] = unitAt(p.text, off, unit);
   if (e <= s) return;
   const text = cleanText(p.text.slice(s, e));
   if (!text) return;
-  R.cur = { p, s, e, text };
+  R.cur = { p, s, e, text, unit };
   clearHL();
   drawHL(p, s, e);
   if (scroll) {
@@ -760,22 +778,24 @@ function selectSentence(p, off, scroll = false) {
 }
 async function stepSentence(dir) {
   const c = R.cur; if (!c) return;
+  const unit = c.unit || S.unit;
+  const skip = unit === 'word' ? (ch => !/[\p{L}\p{N}]/u.test(ch)) : (ch => /\s/.test(ch));
   let p = c.p;
   if (dir > 0) {
-    let i = c.e; while (i < p.text.length && /\s/.test(p.text[i])) i++;
-    if (i < p.text.length && /[\p{L}\p{N}]/u.test(p.text.slice(i))) return selectSentence(p, i, true);
+    let i = c.e; while (i < p.text.length && skip(p.text[i])) i++;
+    if (i < p.text.length && /[\p{L}\p{N}]/u.test(p.text.slice(i))) return selectSentence(p, i, true, unit);
     for (let n = p.n + 1; n <= R.pages.length; n++) {
       const q = R.pages[n - 1]; q.wrap.scrollIntoView({ block: 'start' }); await renderPage(q);
-      const j = q.text.search(/[\p{L}\p{N}]/u); if (j >= 0) return selectSentence(q, j, true);
+      const j = q.text.search(/[\p{L}\p{N}]/u); if (j >= 0) return selectSentence(q, j, true, unit);
     }
     toast('סוף המסמך');
   } else {
-    let i = c.s - 1; while (i >= 0 && /\s/.test(p.text[i])) i--;
-    if (i >= 0) { const [s] = sentenceAt(p.text, i); return selectSentence(p, Math.max(0, s), true); }
+    let i = c.s - 1; while (i >= 0 && skip(p.text[i])) i--;
+    if (i >= 0) { const [s] = unitAt(p.text, i, unit); return selectSentence(p, Math.max(0, s), true, unit); }
     for (let n = p.n - 1; n >= 1; n--) {
       const q = R.pages[n - 1]; await renderPage(q); q.wrap.scrollIntoView({ block: 'end' });
-      let j = q.text.length - 1; while (j >= 0 && /\s/.test(q.text[j])) j--;
-      if (j >= 0) { const [s] = sentenceAt(q.text, j); return selectSentence(q, s, true); }
+      let j = q.text.length - 1; while (j >= 0 && skip(q.text[j])) j--;
+      if (j >= 0) { const [s] = unitAt(q.text, j, unit); return selectSentence(q, s, true, unit); }
     }
     toast('תחילת המסמך');
   }
@@ -867,6 +887,7 @@ function paintToggles() {
   b.style.setProperty('--pf', f || 'none');
   b.style.setProperty('--tfs', S.tfs + 'px');
   $('#tapBtn').classList.toggle('on', S.tap);
+  $('#tapLbl').textContent = !S.tap ? 'סימון חופשי' : S.unit === 'word' ? 'הקשה = מילה' : 'הקשה = משפט';
   $('#tapChk').checked = S.tap;
   $('#tfsIn').value = S.tfs; $('#conIn').value = S.con; $('#briIn').value = S.bri; $('#spdIn').value = S.spd; $('#wakeChk').checked = S.wake;
   $$('#themes button').forEach(x => x.classList.toggle('on', x.dataset.t === S.theme));
@@ -884,7 +905,13 @@ $('#briIn').oninput = e => { S.bri = +e.target.value; saveS(); paintToggles(); }
 $('#spdIn').oninput = e => { S.spd = +e.target.value; saveS(); paintSpeed(); };
 $('#wakeChk').onchange = e => { S.wake = e.target.checked; saveS(); syncWake(); };
 $('#viewReset').onclick = () => { Object.assign(S, { theme: 'white', con: 100, bri: 100, spd: 1, tfs: 20 }); saveS(); paintToggles(); };
-$('#tapBtn').onclick = () => { S.tap = !S.tap; saveS(); paintToggles(); toast(S.tap ? 'הקשה על טקסט = תרגום משפט' : 'מצב סימון חופשי: לחיצה ארוכה וגרירה'); };
+$('#tapBtn').onclick = () => {
+  if (!S.tap) { S.tap = true; S.unit = 'sentence'; }
+  else if (S.unit === 'sentence') S.unit = 'word';
+  else S.tap = false;
+  saveS(); paintToggles();
+  toast(!S.tap ? 'סימון חופשי: לחיצה ארוכה וגרירה' : S.unit === 'word' ? 'הקשה על מילה = תרגום המילה' : 'הקשה על טקסט = תרגום המשפט');
+};
 $('#tapChk').onchange = e => { S.tap = e.target.checked; saveS(); paintToggles(); };
 $('#tfsIn').oninput = e => { S.tfs = +e.target.value; saveS(); paintToggles(); };
 
@@ -954,18 +981,20 @@ async function syncWake() {
 document.addEventListener('visibilitychange', () => { syncWake(); if (document.hidden) asPause(true); });
 
 /* ================= translation engines ================= */
-const ENG_NAME = { google: 'Google · אונליין', chrome: 'כרום מובנה · במכשיר', local: 'מודל במכשיר · NLLB', cache: 'מהזיכרון' };
+const ENG_NAME = { google: 'Google · אונליין', chrome: 'כרום מובנה · במכשיר', local: 'מודל במכשיר', cache: 'מהזיכרון' };
 const ENG = {
   async google(text, s, t) {
     if (!navigator.onLine) throw new Error('offline');
     const g = c => c === 'he' ? 'iw' : (c === 'zh' ? 'zh-CN' : c);
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${S.src === 'auto' ? 'auto' : g(s)}&tl=${g(t)}&dt=t&q=${encodeURIComponent(text)}`;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${S.src === 'auto' ? 'auto' : g(s)}&tl=${g(t)}&dt=t${/\s/.test(text) ? '' : '&dt=bd'}&q=${encodeURIComponent(text)}`;
     const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 9000);
     try {
       const r = await fetch(url, { signal: ctl.signal });
       if (!r.ok) throw new Error('http ' + r.status);
       const j = await r.json();
-      return (j[0] || []).map(x => x && x[0] || '').join('').trim();
+      const text2 = (j[0] || []).map(x => x && x[0] || '').join('').trim();
+      const alts = Array.isArray(j[1]) ? j[1].map(d => ({ pos: d[0], terms: (d[1] || []).slice(0, 6) })).filter(d => d.terms.length) : [];
+      return alts.length ? { text: text2, alts } : text2;
     } finally { clearTimeout(to); }
   },
   async chrome(text, s, t) {
@@ -973,10 +1002,13 @@ const ENG = {
     return (await tr.translate(text)).trim();
   },
   async local(text, s, t) {
-    if (!localReady() && !W.ready) throw new Error('local-missing');
+    const m = modelFor(s, t);
+    if (!m) throw new Error('local-missing');
     const a = LMAP[s], b = LMAP[t];
     if (!a || !b) throw new Error('lang');
-    return (await workerCall({ type: 'translate', model: S.model, text, src: a[2], tgt: b[2] })).text.trim();
+    const msg = { type: 'translate', model: m.id, text };
+    if (!m.pairs) { msg.src = a[2]; msg.tgt = b[2]; }
+    return (await workerCall(msg)).text.trim();
   }
 };
 const chromeTrs = {};
@@ -1010,21 +1042,23 @@ async function translate(text) {
   const [s, t] = pair(text);
   const key = `${s}|${t}|${text}`;
   const hit = await dbGet('tcache', key).catch(() => null);
-  if (hit) return { text: hit.t, engine: 'cache', from: hit.e, s, t };
+  if (hit) return { text: hit.t, alts: hit.a, engine: 'cache', from: hit.e, s, t };
   let lastErr = null;
   for (const eng of engineOrder()) {
     try {
-      const out = await ENG[eng](text, s, t);
-      if (out) { dbPut('tcache', { t: out, e: eng, at: Date.now() }, key).catch(() => {}); return { text: out, engine: eng, s, t }; }
+      let out = await ENG[eng](text, s, t);
+      const alts = out && out.alts; if (out && typeof out === 'object') out = out.text;
+      if (out) { dbPut('tcache', { t: out, a: alts, e: eng, at: Date.now() }, key).catch(() => {}); return { text: out, alts, engine: eng, s, t }; }
     } catch (e) { lastErr = e; }
   }
   const err = new Error('none'); err.cause = lastErr; throw err;
 }
 function errMsg() {
   if (!navigator.onLine && !localReady())
-    return 'אין אינטרנט ועוד לא הורדת מודל תרגום למכשיר.\nכשיהיה חיבור: שפות והגדרות ← "הורדת המודל". אחרי זה זה יעבוד גם בטיסה 🛫';
+    return 'אין אינטרנט ועוד לא הורדת מודל תרגום למכשיר.\nכשיהיה חיבור: שפות והגדרות ← "הורדה". אחרי זה זה יעבוד גם בטיסה 🛫';
   if (S.engine === 'offline' && !localReady())
-    return 'מצב "אופליין בלבד" דורש מודל במכשיר. היכנס לשפות והגדרות ← "הורדת המודל".';
+    return 'מצב "אופליין בלבד" דורש מודל במכשיר. היכנס לשפות והגדרות ← "הורדה".';
+  if (!navigator.onLine) { const [s, t] = pair(lastAsked || 'a'); return `המודל שהורדת לא תומך ב־${lname(s)} ← ${lname(t)}. אפשר להוריד את מודל "כל השפות" בהגדרות.`; }
   return 'התרגום נכשל. בדוק חיבור או נסה מנוע אחר בהגדרות.';
 }
 
@@ -1038,7 +1072,7 @@ async function ensureWorker() {
   W.w = new Worker('mt-worker.js', { type: 'module' });
   W.w.onmessage = e => {
     const m = e.data;
-    if (m.type === 'progress') return onLocalProgress(m.p);
+    if (m.type === 'progress') return onLocalProgress(m.model, m.p);
     const cb = W.cbs[m.id]; if (!cb) return; delete W.cbs[m.id];
     m.type === 'error' ? cb.rej(new Error(m.error)) : cb.res(m);
   };
@@ -1049,39 +1083,55 @@ async function workerCall(msg) {
   const w = await ensureWorker();
   return new Promise((res, rej) => { const id = ++W.id; W.cbs[id] = { res, rej }; w.postMessage({ ...msg, id }); });
 }
-function onLocalProgress(p) {
+const DL = {};
+function onLocalProgress(model, p) {
   if (p.status === 'progress' && p.file) {
-    W.files[p.file] = { l: p.loaded || 0, t: p.total || 0 };
-    let l = 0, t = 0; for (const f of Object.values(W.files)) { l += f.l; t += f.t; }
-    if (t > 0) {
-      const pct = Math.min(100, l / t * 100);
-      $('#locProg').classList.add('show'); $('#locProg i').style.width = pct + '%';
-      $('#locStatus').innerHTML = `<span class="warn">מוריד… ${(l / 1048576).toFixed(0)} / ${(t / 1048576).toFixed(0)} MB</span>`;
-    }
+    const d = DL[model] || (DL[model] = {});
+    d[p.file] = { l: p.loaded || 0, t: p.total || 0 };
+    let l = 0, t = 0; for (const f of Object.values(d)) { l += f.l; t += f.t; }
+    const m = MODELS.find(x => x.id === model); if (!m || t <= 0) return;
+    const box = document.querySelector(`.mdl[data-k="${m.key}"]`); if (!box) return;
+    box.querySelector('.prog').classList.add('show');
+    box.querySelector('.prog i').style.width = Math.min(100, l / t * 100) + '%';
+    box.querySelector('.status').innerHTML = `<span class="warn">מוריד… ${(l / 1048576).toFixed(0)} / ${(t / 1048576).toFixed(0)} MB</span>`;
   }
 }
-$('#locDl').onclick = async () => {
-  if (!navigator.onLine) { toast('צריך אינטרנט להורדה הראשונה'); return; }
-  $('#locDl').disabled = true; W.files = {};
-  $('#locStatus').innerHTML = '<span class="warn">מתחיל הורדה… אפשר להמשיך לקרוא בינתיים</span>';
-  try {
-    await workerCall({ type: 'load', model: S.model });
-    W.ready = true;
-    localStorage.setItem(LOCAL_READY_KEY, S.model);
-    toast('המודל מוכן — אפשר לתרגם בלי אינטרנט ✈️');
-  } catch (e) {
-    console.error(e);
-    $('#locStatus').innerHTML = `<span class="bad">ההורדה נכשלה: ${esc(e.message).slice(0, 120)}</span>`;
+function renderModels() {
+  $('#models').innerHTML = MODELS.map(m => `<div class="mdl" data-k="${m.key}" style="padding:10px 0;border-top:1px solid var(--line)">
+    <div style="font-weight:650">${m.name}</div><div style="font-size:12px;color:var(--mut);margin:2px 0 4px">${m.size}</div>
+    <div class="status">${isReady(m) ? '<span class="ok">✓ מותקן — עובד בלי אינטרנט</span>' : '<span style="color:var(--mut)">לא הותקן</span>'}</div>
+    <div class="prog"><i></i></div>
+    <div class="row">${isReady(m) ? `<button class="btn ghost sm" data-mdel="${m.key}">מחיקה</button>` : `<button class="btn sm" data-mdl="${m.key}">הורדה</button>`}</div></div>`).join('');
+}
+$('#models').addEventListener('click', async e => {
+  const dl = e.target.closest('[data-mdl]'), del = e.target.closest('[data-mdel]');
+  if (dl) {
+    const m = MODELS.find(x => x.key === dl.dataset.mdl);
+    if (!navigator.onLine) { toast('צריך אינטרנט להורדה הראשונה'); return; }
+    dl.disabled = true; DL[m.id] = {};
+    const box = dl.closest('.mdl');
+    box.querySelector('.status').innerHTML = '<span class="warn">מתחיל הורדה… אפשר להמשיך לקרוא בינתיים</span>';
+    try {
+      await workerCall({ type: 'load', model: m.id });
+      // sanity check: one real translation before we call it ready
+      const probe = m.pairs ? { type: 'translate', model: m.id, text: 'Hello' } : { type: 'translate', model: m.id, text: 'Hello', src: 'eng_Latn', tgt: 'heb_Hebr' };
+      await workerCall(probe);
+      localStorage.setItem(readyKey(m), '1');
+      toast('המודל מוכן — אפשר לתרגם בלי אינטרנט ✈️');
+      renderModels();
+    } catch (err) {
+      console.error(err);
+      dl.disabled = false; box.querySelector('.prog').classList.remove('show');
+      box.querySelector('.status').innerHTML = `<span class="bad">ההורדה נכשלה: ${esc(String(err.message || err)).slice(0, 160)}</span>`;
+    }
+  } else if (del) {
+    const m = MODELS.find(x => x.key === del.dataset.mdel);
+    try { await workerCall({ type: 'unload', model: m.id }); } catch (e2) {}
+    try { const c = await caches.open('transformers-cache'); for (const k of await c.keys()) if (k.url.includes('/' + m.id + '/')) await c.delete(k); } catch (e2) {}
+    localStorage.removeItem(readyKey(m));
+    toast('המודל נמחק מהמכשיר'); renderModels();
   }
-  $('#locDl').disabled = false; $('#locProg').classList.remove('show');
-  paintEngineStatus();
-};
-$('#locDel').onclick = async () => {
-  try { await caches.delete('transformers-cache'); } catch (e) {}
-  localStorage.removeItem(LOCAL_READY_KEY);
-  if (W.w) { W.w.terminate(); W.w = null; } W.ready = false;
-  toast('המודל נמחק מהמכשיר'); paintEngineStatus();
-};
+});
 $('#chrDl').onclick = async () => {
   const [s, t] = S.src === 'auto' ? [S.lastLatin || 'en', S.tgt] : [S.src, S.tgt];
   $('#chrDl').disabled = true; $('#chrProg').classList.add('show');
@@ -1093,8 +1143,7 @@ $('#chrDl').onclick = async () => {
   paintEngineStatus();
 };
 async function paintEngineStatus() {
-  $('#locStatus').innerHTML = localReady() ? '<span class="ok">✓ מותקן במכשיר — מתרגם גם בלי אינטרנט</span>' : '<span style="color:var(--mut)">לא הותקן</span>';
-  $('#locDel').style.display = localReady() ? '' : 'none';
+  renderModels();
   if (!('Translator' in self)) {
     $('#chrStatus').innerHTML = '<span style="color:var(--mut)">לא זמין בדפדפן הזה</span>'; $('#chrDl').style.display = 'none';
   } else {
@@ -1114,12 +1163,14 @@ async function paintEngineStatus() {
 }
 
 /* ================= translation sheet ================= */
-let tReq = 0, lastResult = null;
+let tReq = 0, lastResult = null, lastAsked = '';
 function openT() { $('#tsheet').classList.add('open'); document.body.classList.add('tsheet-open'); if (AS.on) asPause(true); }
 function closeT() { $('#tsheet').classList.remove('open'); document.body.classList.remove('tsheet-open'); clearHL(); tReq++; }
 $('#tClose').onclick = () => { closeT(); R.cur = null; };
 async function showTranslation(text) {
-  const my = ++tReq;
+  const my = ++tReq; lastAsked = text;
+  $('#tAlts').innerHTML = '';
+  $('#tCtx').hidden = !(R.cur && R.cur.unit === 'word');
   $('#tSingle').hidden = false; $('#tPage').hidden = true; $('#tTitle').textContent = 'תרגום';
   $('#tSrc').textContent = text;
   const [s, t] = pair(text);
@@ -1133,6 +1184,9 @@ async function showTranslation(text) {
     const r = await translate(text);
     if (my !== tReq) return;
     out.textContent = r.text;
+    if (r.alts && r.alts.length) {
+      $('#tAlts').innerHTML = r.alts.map(a => `<div class="alt" dir="${RTL.has(r.t) ? 'rtl' : 'ltr'}"><b>${esc(POS[a.pos] || a.pos || '')}</b> ${a.terms.map(esc).join(' · ')}</div>`).join('');
+    }
     $('#tEng').innerHTML = `מנוע: <b>${ENG_NAME[r.engine]}${r.from ? ' (' + ENG_NAME[r.from] + ')' : ''}</b>`;
     lastResult = { src: text, tr: r.text, s: r.s, t: r.t };
   } catch (e) {
@@ -1141,6 +1195,8 @@ async function showTranslation(text) {
     lastResult = null;
   } finally { clearTimeout(slow); }
 }
+const POS = { noun: 'שם עצם', verb: 'פועל', adjective: 'תואר', adverb: 'תואר הפועל', preposition: 'מילת יחס', pronoun: 'כינוי', conjunction: 'מילת חיבור', interjection: 'קריאה', abbreviation: 'קיצור', phrase: 'ביטוי', article: 'יידוע', prefix: 'תחילית', suffix: 'סופית' };
+$('#tCtx').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'sentence'); };
 $('#tNext').onclick = () => stepSentence(1);
 $('#tPrev').onclick = () => stepSentence(-1);
 $('#tCopy').onclick = async () => { if (!lastResult) return; try { await navigator.clipboard.writeText(lastResult.tr); toast('התרגום הועתק'); } catch (e) { toast('לא הצלחתי להעתיק'); } };
