@@ -295,7 +295,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <button class="tbtn" id="zoomFit">התאמה</button>
     <button class="tbtn" id="zoomIn" aria-label="הגדלה"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></svg></button>
     <span class="tsep"></span>
-    <button class="tbtn" id="cleanBtn" data-open="cleanSheet"><svg class="i" viewBox="0 0 24 24"><path d="M14 4l6 6M4 20l3-1 11-11-2-2L5 17zM15 5l4 4M3 10l1.5-1.5M6 4V2M10 6h2"/></svg>ניקוי</button>
+    <button class="tbtn" id="cleanBtn" data-open="cleanSheet"><svg class="i" viewBox="0 0 24 24"><path d="M14 4l6 6M4 20l3-1 11-11-2-2L5 17zM15 5l4 4M3 10l1.5-1.5M6 4V2M10 6h2"/></svg>סריקה</button>
     <button class="tbtn" data-open="viewSheet"><svg class="i" viewBox="0 0 24 24"><path d="M3 19l5-14 5 14M5 14h6M15 19v-6a3 3 0 0 1 6 0v6M15 16h6"/></svg>תצוגה</button>
     <button class="tbtn" id="asBtn"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v14M6 11l6 6 6-6M5 21h14"/></svg>גלילה</button>
     <button class="tbtn" id="focusBtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>מסך מלא</button>
@@ -434,7 +434,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
 <!-- =================== scan cleanup =================== -->
 <div class="sheet" id="cleanSheet">
   <div class="grip"></div>
-  <div class="hd"><h3>ניקוי סריקה</h3><button class="iconbtn" data-close aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="hd"><h3>דפים סרוקים</h3><button class="iconbtn" data-close aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="bd">
     <p style="margin:0 0 12px;color:var(--mut);font-size:13.5px;line-height:1.6">מנקה דפים מצולמים: מעלים רקע אפור, צללים וכתמים, והכתב נהיה שחור וחד על לבן. הקובץ המקורי לא משתנה.</p>
     <span class="lbl">להפעיל על</span>
@@ -448,6 +448,17 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <div class="rng"><span>עדין</span><input type="range" id="cleanIn" min="4" max="30" step="1"><span>חזק</span></div>
     <span class="lbl">עובי הכתב</span>
     <div class="rng"><span>דק</span><input type="range" id="boldIn" min="0" max="2" step="1"><span>עבה</span></div>
+    <div class="box" style="margin-top:6px">
+      <h4>🔎 זיהוי טקסט (OCR)</h4>
+      <p>הופך דף מצולם לטקסט — ואז אפשר להקיש על מילים ולתרגם. רץ במכשיר, גם בלי אינטרנט. אנגלית ועברית.</p>
+      <div class="status" id="ocrStatus"></div>
+      <div class="prog" id="ocrProg"><i></i></div>
+      <div class="row">
+        <button class="btn sm" id="ocrPage">זיהוי בדף הזה</button>
+        <button class="btn ghost sm" id="ocrBook">כל הספר</button>
+        <button class="btn ghost sm" id="ocrStop" hidden>עצירה</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -524,12 +535,14 @@ function modelFor(s, t) { return MODELS.find(m => isReady(m) && (!m.pairs || m.p
 
 /* ================= IndexedDB ================= */
 const db = await new Promise((res, rej) => {
-  const r = indexedDB.open('inshuf', 1);
+  const r = indexedDB.open('inshuf', 2);
   r.onupgradeneeded = () => {
     const d = r.result;
-    d.createObjectStore('docs', { keyPath: 'id' });
-    d.createObjectStore('tcache');
-    d.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
+    const has = n => d.objectStoreNames.contains(n);
+    if (!has('docs')) d.createObjectStore('docs', { keyPath: 'id' });
+    if (!has('tcache')) d.createObjectStore('tcache');
+    if (!has('notes')) d.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
+    if (!has('ocr')) d.createObjectStore('ocr');
   };
   r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
 });
@@ -688,6 +701,12 @@ function renderPage(p) {
       if (gen !== R.gen) return;
       buildText(p, tc.items, layer.textDivs);
       p.rendered = true;
+      if (isImagePage(p)) {
+        const cached = await dbGet('ocr', ocrKey(p.n)).catch(() => null);
+        if (gen !== R.gen) return;
+        if (cached) applyOCR(p, cached);
+        else if (R.rec && R.rec.ocrAll) queueOCR(p.n);
+      }
       if (p.n === R.curPage) unrenderFar();
     } catch (e) { console.warn('render', p.n, e); }
     finally { p.rendering = null; }
@@ -836,7 +855,12 @@ pagesEl.addEventListener('click', e => {
   let off = -1;
   if (S.tap && p && p.rendered) off = hitText(p, e.clientX, e.clientY);
   if (off < 0) {
-    if (S.tap && p && p.rendered && p.text.replace(/\s/g, '').length < 3 && !bubbleOpen()) { toast('בעמוד הזה אין טקסט — זו תמונה סרוקה', 2200); return; }
+    if (S.tap && p && p.rendered && isImagePage(p) && !bubbleOpen()) {
+      if (OCR.busy === p.n) return;
+      toast('דף סרוק — מזהה את הטקסט…', 2500);
+      runOCR([p.n]).then(ok => { if (ok) toast('הטקסט זוהה — אפשר להקיש על מילים', 2200); });
+      return;
+    }
     // tap on margins / blank space: close bubble / translation, or toggle full-screen reading
     if (bubbleOpen()) { hideBubble(); clearHL(); R.cur = null; }
     else if ($('#tsheet').classList.contains('open')) { peekT(); }
@@ -1160,6 +1184,10 @@ function paintClean() {
   $('#cleanHint').textContent = R.rec.clean ? 'כל דפי הספר מנוקים' : cnt ? `${cnt} דפים מנוקים בספר הזה · עכשיו בעמוד ${R.curPage}` : `עמוד ${R.curPage}`;
   $('#cleanBtn').classList.toggle('on', !!(R.rec.clean || cnt));
   $('#cleanIn').value = S.cleanT; $('#boldIn').value = S.bold;
+  if (!OCR.busy) {
+    const p = R.pages[R.curPage - 1];
+    $('#ocrStatus').innerHTML = !p || !p.rendered ? '' : p.ocr ? '<span class="ok">✓ הטקסט בדף הזה זוהה</span>' : isImagePage(p) ? '<span class="warn">הדף הזה הוא תמונה — אין בו טקסט</span>' : '<span style="color:var(--mut)">בדף הזה כבר יש טקסט אמיתי</span>';
+  }
 }
 $('#cleanSeg').onclick = e => {
   const b = e.target.closest('button'); if (!b || !R.rec) return;
@@ -1176,6 +1204,125 @@ let cleanT2;
 const cleanChanged = () => { saveS(); clearTimeout(cleanT2); cleanT2 = setTimeout(() => rerenderPages(R.pages.filter(p => shouldClean(p.n))), 250); };
 $('#cleanIn').oninput = e => { S.cleanT = +e.target.value; cleanChanged(); };
 $('#boldIn').oninput = e => { S.bold = +e.target.value; cleanChanged(); };
+
+/* ================= OCR for scanned pages (Tesseract, on-device) ================= */
+const OCR = { w: null, langs: null, busy: 0, stop: false, chain: Promise.resolve() };
+const isImagePage = p => p.text.replace(/\s/g, '').length < 3;
+const ocrKey = n => (R.rec ? R.rec.id : '') + '|' + n;
+function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(sc); }); }
+function ocrLangs() { return S.src === 'he' ? 'heb+eng' : S.src === 'en' ? 'eng' : 'heb+eng'; }
+async function ocrWorker() {
+  const langs = ocrLangs();
+  if (OCR.w && OCR.langs === langs) return OCR.w;
+  if (OCR.w) { try { await OCR.w.terminate(); } catch (e) {} OCR.w = null; }
+  if (!window.Tesseract) await loadScript('tess/tesseract.min.js');
+  const base = new URL('tess/', location.href).href;
+  OCR.w = await Tesseract.createWorker(langs.split('+'), 1, {
+    workerPath: base + 'worker.min.js', corePath: base + 'core/', langPath: base + 'lang', workerBlobURL: false,
+    logger: m => { if (m.status === 'recognizing text' && OCR.onProg) OCR.onProg(m.progress); }
+  });
+  OCR.langs = langs;
+  return OCR.w;
+}
+async function ocrOne(n) {
+  const page = await R.pdf.getPage(n);
+  const v1 = page.getViewport({ scale: 1 });
+  const sc = Math.min(3.2, 2400 / Math.max(v1.width, v1.height) * 1.4);
+  const vp = page.getViewport({ scale: sc });
+  const c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+  await page.render({ canvasContext: c.getContext('2d', { alpha: false, willReadFrequently: true }), viewport: vp }).promise;
+  const keep = S.bold; S.bold = 0; cleanCanvas(c); S.bold = keep;   // binarise → much better recognition on scans
+  const w = await ocrWorker();
+  const { data } = await w.recognize(c, {}, { blocks: true, text: false });
+  const paras = [];
+  for (const b of data.blocks || []) for (const pa of b.paragraphs || []) {
+    const lines = [];
+    for (const ln of pa.lines || []) {
+      const words = (ln.words || []).filter(wd => wd.text && wd.text.trim() && wd.confidence > 20)
+        .map(wd => ({ t: wd.text.trim(), x: wd.bbox.x0 / sc, y: wd.bbox.y0 / sc, w: (wd.bbox.x1 - wd.bbox.x0) / sc, h: (wd.bbox.y1 - wd.bbox.y0) / sc }));
+      if (words.length) lines.push(words);
+    }
+    if (lines.length) paras.push(lines);
+  }
+  const res = { paras, langs: OCR.langs, at: Date.now() };
+  await dbPut('ocr', res, ocrKey(n)).catch(() => {});
+  return res;
+}
+const measureCtx = document.createElement('canvas').getContext('2d');
+function applyOCR(p, res) {
+  const tl = p.wrap.querySelector('.textLayer'); if (!tl) return;
+  tl.innerHTML = '';
+  const k = R.scale; let text = ''; const segs = [];
+  const frag = document.createDocumentFragment();
+  for (const lines of res.paras) {
+    for (const words of lines) {
+      for (const wd of words) {
+        const sp = document.createElement('span');
+        const h = Math.max(4, wd.h * k), wpx = Math.max(2, wd.w * k);
+        sp.textContent = wd.t;
+        sp.style.cssText = `left:${wd.x * k}px;top:${wd.y * k}px;font-size:${h}px;font-family:sans-serif;line-height:1`;
+        measureCtx.font = `${h}px sans-serif`;
+        const mw = measureCtx.measureText(wd.t).width || wpx;
+        sp.style.transform = `scaleX(${wpx / mw})`;
+        frag.appendChild(sp);
+        if (text && !/\s$/.test(text)) text += ' ';
+        segs.push({ node: sp.firstChild, start: text.length, len: wd.t.length });
+        text += wd.t;
+      }
+      text += ' ';
+    }
+    text = text.replace(/ $/, '') + '\n';
+  }
+  tl.appendChild(frag);
+  p.text = text; p.segs = segs; p.ocr = true;
+}
+function runOCR(nums) {
+  OCR.stop = false;
+  const job = OCR.chain.then(async () => {
+    let ok = false, done = 0;
+    $('#ocrStop').hidden = nums.length < 2;
+    for (const n of nums) {
+      if (OCR.stop || !R.pdf) break;
+      const p = R.pages[n - 1];
+      if (p && p.rendered && !isImagePage(p) && !p.ocr) { done++; continue; }   // has real text already
+      OCR.busy = n;
+      const base = done / nums.length;
+      OCR.onProg = f => {
+        const pct = Math.round((base + f / nums.length) * 100);
+        $('#ocrProg').classList.add('show'); $('#ocrProg i').style.width = pct + '%';
+        $('#ocrStatus').innerHTML = `<span class="warn">מזהה ${nums.length > 1 ? `עמוד ${n} (${done + 1}/${nums.length})` : `עמוד ${n}`}… ${pct}%</span>`;
+      };
+      try {
+        let res = await dbGet('ocr', ocrKey(n)).catch(() => null);
+        if (!res) res = await ocrOne(n);
+        const q = R.pages[n - 1];
+        if (q && q.rendered && isImagePage(q)) applyOCR(q, res);
+        ok = true;
+      } catch (e) {
+        console.error(e);
+        $('#ocrStatus').innerHTML = `<span class="bad">הזיהוי נכשל: ${esc(String(e.message || e)).slice(0, 140)}</span>`;
+        toast('זיהוי הטקסט נכשל'); break;
+      }
+      done++;
+    }
+    OCR.busy = 0; OCR.onProg = null;
+    $('#ocrProg').classList.remove('show'); $('#ocrStop').hidden = true;
+    if (ok) $('#ocrStatus').innerHTML = `<span class="ok">✓ ${OCR.stop ? 'נעצר' : 'הטקסט זוהה'} — אפשר להקיש על מילים</span>`;
+    return ok;
+  });
+  OCR.chain = job.catch(() => {});
+  return job;
+}
+const queued = new Set();
+function queueOCR(n) { if (queued.has(n)) return; queued.add(n); runOCR([n]).finally(() => queued.delete(n)); }
+$('#ocrPage').onclick = () => runOCR([R.curPage]);
+$('#ocrBook').onclick = () => {
+  if (!R.rec) return;
+  R.rec.ocrAll = true; dbPut('docs', R.rec).catch(() => {});
+  const order = [...R.pages.map(p => p.n)].sort((a, b) => Math.abs(a - R.curPage) - Math.abs(b - R.curPage));
+  runOCR(order).then(ok => ok && !OCR.stop && toast('כל הספר זוהה ✓'));
+};
+$('#ocrStop').onclick = () => { OCR.stop = true; if (R.rec) { R.rec.ocrAll = false; dbPut('docs', R.rec).catch(() => {}); } };
 
 /* ================= reading look: 5 tones + contrast/brightness ================= */
 const THEME_BASE = {
