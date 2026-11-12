@@ -830,22 +830,19 @@ pagesEl.addEventListener('click', e => {
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10 || Date.now() - down.t > 600) return;
   const sel = getSelection(); if (sel && !sel.isCollapsed) return;
   const target = e.target;
-  const onText = target.tagName === 'SPAN' && target.closest('.textLayer') && /\S/.test(target.textContent);
-  if (!S.tap || !onText) {
+  const wrap = target.closest && target.closest('.page');
+  const p = wrap ? R.pages[+wrap.dataset.n - 1] : null;
+  // find the text under the finger — or the nearest text within a finger's width (small print, gaps between lines)
+  let off = -1;
+  if (S.tap && p && p.rendered) off = hitText(p, e.clientX, e.clientY);
+  if (off < 0) {
+    if (S.tap && p && p.rendered && p.text.replace(/\s/g, '').length < 3 && !bubbleOpen()) { toast('בעמוד הזה אין טקסט — זו תמונה סרוקה', 2200); return; }
     // tap on margins / blank space: close bubble / translation, or toggle full-screen reading
-    if (onText) return;
     if (bubbleOpen()) { hideBubble(); clearHL(); R.cur = null; }
     else if ($('#tsheet').classList.contains('open')) { peekT(); }
     else setFocus(!document.body.classList.contains('focus'));
     return;
   }
-  const wrap = target.closest('.page'); const p = R.pages[+wrap.dataset.n - 1];
-  if (!p || !p.rendered) return;
-  const c = caretAt(e.clientX, e.clientY); if (!c) return;
-  if (!c.node.parentElement || !wrap.contains(c.node)) return;
-  let off = offsetFromNode(p, c.node, c.offset);
-  if (off < 0) return;
-  if (off >= p.text.length) off = p.text.length - 1;
   const now = Date.now();
   if (TAP.last && now - TAP.last.t < 320 && Math.hypot(e.clientX - TAP.last.x, e.clientY - TAP.last.y) < 30) {
     clearTimeout(TAP.timer); TAP.last = null;
@@ -858,6 +855,34 @@ pagesEl.addEventListener('click', e => {
   TAP.timer = setTimeout(() => { TAP.last = null; showWord(p, off); }, 290);
 });
 const TAP = { last: null, timer: 0 };
+function hitText(p, x, y) {
+  // 1) exact: caret under the point
+  const c = caretAt(x, y);
+  if (c && p.wrap.contains(c.node)) {
+    const o = offsetFromNode(p, c.node, c.offset);
+    if (o >= 0) {
+      const el = c.node.nodeType === 3 ? c.node.parentElement : c.node;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2) return Math.min(o, p.text.length - 1);
+    }
+  }
+  // 2) nearest text span within ~a fingertip
+  const reach = Math.max(14, 22 / (window.visualViewport ? visualViewport.scale : 1));
+  let best = null, bd = 1e9;
+  for (const g of p.segs) {
+    const el = g.node.parentElement; if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (r.bottom < y - 60 || r.top > y + 60) continue;
+    const dx = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
+    const dy = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+    const d = Math.hypot(dx, dy * 1.4);
+    if (d < bd) { bd = d; best = { g, r }; }
+  }
+  if (!best || bd > reach) return -1;
+  const { g, r } = best;
+  const fx = Math.max(0, Math.min(1, (x - r.left) / Math.max(1, r.width)));
+  return Math.min(p.text.length - 1, g.start + Math.min(g.len - 1, Math.floor(fx * g.len)));
+}
 pagesEl.addEventListener('dblclick', () => { try { getSelection().removeAllRanges(); } catch (err) {} });
 
 /* ---------- word bubble ---------- */
