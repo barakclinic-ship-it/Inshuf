@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>ינשוף · קורא PDF מתרגם</title>
 <meta name="description" content="קורא PDF שמתרגם משפט בהקשה — גם בלי אינטרנט">
 <meta name="theme-color" content="#ffffff">
@@ -29,6 +29,9 @@ body[data-theme="grey"]{--bg:#eef1f5;--bg2:#f6f8fa;--card:#e3e7ed;--line:#d3d9e1
 body[data-theme="dim"]{--bg:#1d2430;--bg2:#232b38;--card:#2b3443;--line:rgba(255,255,255,.09);--tx:#e3e8f0;--mut:#93a1b5;--acc:#60a5fa;--acc-tx:#0b1220;--acc-soft:rgba(96,165,250,.14);--desk:#151a22;--hl:rgba(96,165,250,.30);--hl2:rgba(56,189,248,.28);--hlblend:normal;--shadow:0 2px 10px rgba(0,0,0,.4);color-scheme:dark}
 body[data-theme="night"]{--bg:#0c0e12;--bg2:#13161c;--card:#1a1e26;--line:rgba(255,255,255,.07);--tx:#c4cad3;--mut:#7a8392;--acc:#5b8def;--acc-tx:#06090f;--acc-soft:rgba(91,141,239,.13);--desk:#050608;--hl:rgba(91,141,239,.30);--hl2:rgba(56,189,248,.25);--hlblend:normal;--shadow:0 2px 10px rgba(0,0,0,.6);color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{touch-action:pan-x pan-y}
+#pagesIn{transform-origin:0 0;will-change:auto}
+#pagesIn.pinching{will-change:transform}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Rubik,Heebo,Arial,sans-serif;overflow:hidden;transition:background .25s,color .25s}
 button{font:inherit;color:inherit;cursor:pointer}
 input,select{font:inherit;color:inherit}
@@ -253,6 +256,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <button class="tbtn" id="zoomFit">התאמה</button>
     <button class="tbtn" id="zoomIn" aria-label="הגדלה"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></svg></button>
     <span class="tsep"></span>
+    <button class="tbtn" id="cleanBtn" data-open="cleanSheet"><svg class="i" viewBox="0 0 24 24"><path d="M14 4l6 6M4 20l3-1 11-11-2-2L5 17zM15 5l4 4M3 10l1.5-1.5M6 4V2M10 6h2"/></svg>ניקוי</button>
     <button class="tbtn" data-open="viewSheet"><svg class="i" viewBox="0 0 24 24"><path d="M3 19l5-14 5 14M5 14h6M15 19v-6a3 3 0 0 1 6 0v6M15 16h6"/></svg>תצוגה</button>
     <button class="tbtn" id="asBtn"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v14M6 11l6 6 6-6M5 21h14"/></svg>גלילה</button>
     <button class="tbtn" id="focusBtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>מסך מלא</button>
@@ -374,6 +378,26 @@ input[type=range]{accent-color:var(--acc);width:100%}
   </div>
 </div>
 
+<!-- =================== scan cleanup =================== -->
+<div class="sheet" id="cleanSheet">
+  <div class="grip"></div>
+  <div class="hd"><h3>ניקוי סריקה</h3><button class="iconbtn" data-close aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="bd">
+    <p style="margin:0 0 12px;color:var(--mut);font-size:13.5px;line-height:1.6">מנקה דפים מצולמים: מעלים רקע אפור, צללים וכתמים, והכתב נהיה שחור וחד על לבן. הקובץ המקורי לא משתנה.</p>
+    <span class="lbl">להפעיל על</span>
+    <div class="seg" id="cleanSeg">
+      <button data-v="off">כבוי</button>
+      <button data-v="page">הדף הזה</button>
+      <button data-v="book">כל הספר</button>
+    </div>
+    <div class="status" id="cleanHint" style="color:var(--mut)"></div>
+    <span class="lbl" style="margin-top:14px">עוצמה</span>
+    <div class="rng"><span>עדין</span><input type="range" id="cleanIn" min="4" max="30" step="1"><span>חזק</span></div>
+    <span class="lbl">עובי הכתב</span>
+    <div class="rng"><span>דק</span><input type="range" id="boldIn" min="0" max="2" step="1"><span>עבה</span></div>
+  </div>
+</div>
+
 <!-- =================== notebook =================== -->
 <div class="sheet" id="notes">
   <div class="grip"></div>
@@ -432,7 +456,7 @@ function detectLang(t) {
 }
 
 /* ================= settings ================= */
-const DEF = { src: 'auto', tgt: 'he', engine: 'auto', theme: 'white', con: 100, bri: 100, spd: 1, wake: true, tap: true, unit: 'sentence', tfs: 20, zoom: 1, model: 'Xenova/nllb-200-distilled-600M', lastLatin: 'en' };
+const DEF = { src: 'auto', tgt: 'he', engine: 'auto', theme: 'white', con: 100, bri: 100, spd: 1, wake: true, tap: true, unit: 'sentence', cleanT: 14, bold: 0, tfs: 20, zoom: 1, model: 'Xenova/nllb-200-distilled-600M', lastLatin: 'en' };
 let S = { ...DEF };
 try { S = { ...DEF, ...JSON.parse(localStorage.getItem('inshuf.s') || '{}') }; } catch (e) {}
 const saveS = () => { try { localStorage.setItem('inshuf.s', JSON.stringify(S)); } catch (e) {} };
@@ -535,6 +559,7 @@ async function openDoc(rec) {
   showView('reader');
   history.pushState({ v: 'reader' }, '');
   buildPages();
+  paintClean();
   loading(false);
   const start = Math.min(Math.max(1, rec.page || 1), R.pdf.numPages);
   requestAnimationFrame(() => goPage(start, false));
@@ -549,6 +574,7 @@ function buildPages() {
   if (R.io) R.io.disconnect();
   calcScale();
   pagesEl.innerHTML = '';
+  const inner = document.createElement('div'); inner.id = 'pagesIn';
   R.pages = [];
   const frag = document.createDocumentFragment();
   for (let n = 1; n <= R.pdf.numPages; n++) {
@@ -560,7 +586,7 @@ function buildPages() {
     frag.appendChild(wrap);
     R.pages.push({ n, wrap, w0: null, h0: null, rendered: false, rendering: null, text: '', segs: [] });
   }
-  pagesEl.appendChild(frag);
+  inner.appendChild(frag); pagesEl.appendChild(inner); R.inner = inner;
   R.io = new IntersectionObserver(ents => {
     for (const en of ents) if (en.isIntersecting) renderPage(R.pages[+en.target.dataset.n - 1]);
   }, { root: pagesEl, rootMargin: '120% 0px' });
@@ -596,7 +622,9 @@ function renderPage(p) {
       const c = document.createElement('canvas');
       c.width = Math.floor(vp.width * k); c.height = Math.floor(vp.height * k);
       c.style.width = vp.width + 'px'; c.style.height = vp.height + 'px';
-      await page.render({ canvasContext: c.getContext('2d', { alpha: false }), viewport: vp, transform: k !== 1 ? [k, 0, 0, k, 0, 0] : null }).promise;
+      await page.render({ canvasContext: c.getContext('2d', { alpha: false, willReadFrequently: shouldClean(p.n) }), viewport: vp, transform: k !== 1 ? [k, 0, 0, k, 0, 0] : null }).promise;
+      if (gen !== R.gen) return;
+      if (shouldClean(p.n)) cleanCanvas(c);
       if (gen !== R.gen) return;
       const tc = await page.getTextContent();
       const tl = document.createElement('div'); tl.className = 'textLayer';
@@ -851,25 +879,148 @@ $('#pgIn').addEventListener('change', e => goPage(+e.target.value));
 $('#pgIn').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 
 /* zoom */
-function setZoom(z) {
-  S.zoom = Math.max(0.5, Math.min(3.5, Math.round(z * 100) / 100)); saveS();
+function setZoom(z, at) {
+  const old = S.zoom;
+  S.zoom = Math.max(0.5, Math.min(4, Math.round(z * 100) / 100)); saveS();
   const anchor = R.curPage;
   const rel = (() => { const p = R.pages[anchor - 1]; if (!p) return 0; return (pagesEl.scrollTop - p.wrap.offsetTop) / p.wrap.offsetHeight; })();
+  const st = pagesEl.scrollTop, sl = pagesEl.scrollLeft;
   R.cur = null; closeT();
   buildPages();
-  const p = R.pages[anchor - 1];
-  if (p) pagesEl.scrollTop = p.wrap.offsetTop + rel * p.wrap.offsetHeight;
+  if (at) {
+    const k = S.zoom / old, top0 = R.inner.offsetTop;
+    pagesEl.scrollTop = (st + at.y - top0) * k + top0 - at.y;
+    pagesEl.scrollLeft = (sl + at.x) * k - at.x;
+  } else {
+    const p = R.pages[anchor - 1];
+    if (p) pagesEl.scrollTop = p.wrap.offsetTop + rel * p.wrap.offsetHeight;
+  }
   toast(`זום ${Math.round(S.zoom * 100)}%`, 900);
 }
+/* pinch-to-zoom: only the pages zoom, the app chrome stays put */
+const PZ = { on: false };
+const tdist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+pagesEl.addEventListener('touchstart', e => {
+  if (e.touches.length !== 2 || !R.inner) return;
+  const [a, b] = e.touches, r = pagesEl.getBoundingClientRect();
+  PZ.on = true; PZ.d0 = tdist(a, b); PZ.k = 1;
+  PZ.at = { x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top };
+  R.inner.classList.add('pinching');
+  R.inner.style.transformOrigin = `${PZ.at.x + pagesEl.scrollLeft - R.inner.offsetLeft}px ${PZ.at.y + pagesEl.scrollTop - R.inner.offsetTop}px`;
+  if (AS.on) AS.hold = true;
+}, { passive: true });
+pagesEl.addEventListener('touchmove', e => {
+  if (!PZ.on || e.touches.length !== 2) return;
+  e.preventDefault();
+  const lim = Math.max(0.5 / S.zoom, Math.min(4 / S.zoom, tdist(e.touches[0], e.touches[1]) / PZ.d0));
+  PZ.k = lim;
+  R.inner.style.transform = `scale(${lim})`;
+}, { passive: false });
+const endPinch = () => {
+  if (!PZ.on) return;
+  PZ.on = false;
+  R.inner.classList.remove('pinching'); R.inner.style.transform = '';
+  if (Math.abs(PZ.k - 1) > 0.04) setZoom(S.zoom * PZ.k, PZ.at);
+};
+pagesEl.addEventListener('touchend', e => { if (e.touches.length < 2) endPinch(); });
+pagesEl.addEventListener('touchcancel', endPinch);
+document.addEventListener('gesturestart', e => e.preventDefault());
 $('#zoomIn').onclick = () => setZoom(S.zoom * 1.2);
 $('#zoomOut').onclick = () => setZoom(S.zoom / 1.2);
 $('#zoomFit').onclick = () => setZoom(1);
-pagesEl.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); setZoom(S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
+let wheelT, wheelK = 1, wheelAt = null;
+pagesEl.addEventListener('wheel', e => {
+  if (!e.ctrlKey || !R.inner) return;
+  e.preventDefault();
+  const r = pagesEl.getBoundingClientRect();
+  if (wheelK === 1) { wheelAt = { x: e.clientX - r.left, y: e.clientY - r.top }; R.inner.style.transformOrigin = `${wheelAt.x + pagesEl.scrollLeft - R.inner.offsetLeft}px ${wheelAt.y + pagesEl.scrollTop - R.inner.offsetTop}px`; }
+  wheelK = Math.max(0.5 / S.zoom, Math.min(4 / S.zoom, wheelK * Math.exp(-e.deltaY / 300)));
+  R.inner.style.transform = `scale(${wheelK})`;
+  clearTimeout(wheelT);
+  wheelT = setTimeout(() => { const k = wheelK; wheelK = 1; R.inner.style.transform = ''; setZoom(S.zoom * k, wheelAt); }, 220);
+}, { passive: false });
 let lastW = 0;
 addEventListener('resize', () => {
   clearTimeout(window.__rz);
   window.__rz = setTimeout(() => { if (R.pdf && $('#reader').classList.contains('show') && Math.abs(pagesEl.clientWidth - lastW) > 30) { lastW = pagesEl.clientWidth; setZoom(S.zoom); } }, 300);
 });
+
+/* ================= scan cleanup (adaptive threshold → crisp black on white) ================= */
+const shouldClean = n => !!(R.rec && (R.rec.clean || (R.rec.cleanPages || []).includes(n)));
+function cleanCanvas(c) {
+  const w = c.width, h = c.height; if (!w || !h) return;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+  const n = w * h, g = new Uint8Array(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) g[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+  // integral image
+  const W = w + 1, I = new Uint32Array(W * (h + 1));
+  for (let y = 0; y < h; y++) { let row = 0; for (let x = 0; x < w; x++) { row += g[y * w + x]; I[(y + 1) * W + x + 1] = I[y * W + x + 1] + row; } }
+  const half = Math.max(8, Math.round(Math.min(w, h) / 40));
+  const T = 1 - S.cleanT / 100;            // pixel darker than T·local-mean → ink
+  const lo = T - 0.07, hi = T + 0.03;       // soft edge for smooth letters
+  const out = new Uint8Array(n);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - half), y1 = Math.min(h, y + half + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - half), x1 = Math.min(w, x + half + 1);
+      const sum = I[y1 * W + x1] - I[y0 * W + x1] - I[y1 * W + x0] + I[y0 * W + x0];
+      const mean = sum / ((x1 - x0) * (y1 - y0)) || 1;
+      const r = g[y * w + x] / mean;
+      out[y * w + x] = r <= lo ? 0 : r >= hi ? 255 : ((r - lo) / (hi - lo) * 255) | 0;
+    }
+  }
+  // optional thickening (min filter) for faint thin print
+  let res = out;
+  for (let pass = 0; pass < (S.bold | 0); pass++) {
+    const nx = new Uint8Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let m = res[y * w + x];
+      if (x > 0 && res[y * w + x - 1] < m) m = res[y * w + x - 1];
+      if (x < w - 1 && res[y * w + x + 1] < m) m = res[y * w + x + 1];
+      if (y > 0 && res[(y - 1) * w + x] < m) m = res[(y - 1) * w + x];
+      if (y < h - 1 && res[(y + 1) * w + x] < m) m = res[(y + 1) * w + x];
+      nx[y * w + x] = m;
+    }
+    res = nx;
+  }
+  for (let i = 0, j = 0; i < n; i++, j += 4) { const v = res[i]; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; }
+  ctx.putImageData(img, 0, 0);
+}
+function rerenderPages(list) {
+  for (const p of list) {
+    if (!p.rendered && !p.rendering) continue;
+    if (R.cur && R.cur.p === p) { R.cur = null; closeT(); }
+    p.rendered = false; p.text = ''; p.segs = [];
+    p.wrap.innerHTML = `<div class="ph">${p.n}</div>`;
+    if (Math.abs(p.n - R.curPage) <= 2) renderPage(p);
+  }
+  R.io && R.pages.forEach(p => { R.io.unobserve(p.wrap); R.io.observe(p.wrap); });
+}
+function paintClean() {
+  if (!R.rec) return;
+  const mode = R.rec.clean ? 'book' : (R.rec.cleanPages || []).includes(R.curPage) ? 'page' : 'off';
+  $$('#cleanSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === mode));
+  const cnt = (R.rec.cleanPages || []).length;
+  $('#cleanHint').textContent = R.rec.clean ? 'כל דפי הספר מנוקים' : cnt ? `${cnt} דפים מנוקים בספר הזה · עכשיו בעמוד ${R.curPage}` : `עמוד ${R.curPage}`;
+  $('#cleanBtn').classList.toggle('on', !!(R.rec.clean || cnt));
+  $('#cleanIn').value = S.cleanT; $('#boldIn').value = S.bold;
+}
+$('#cleanSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b || !R.rec) return;
+  const v = b.dataset.v, rec = R.rec, before = new Set(R.pages.filter(p => shouldClean(p.n)).map(p => p.n));
+  rec.cleanPages = rec.cleanPages || [];
+  if (v === 'book') rec.clean = true;
+  else if (v === 'page') { rec.clean = false; if (!rec.cleanPages.includes(R.curPage)) rec.cleanPages.push(R.curPage); }
+  else { if (rec.clean) { rec.clean = false; rec.cleanPages = []; } else rec.cleanPages = rec.cleanPages.filter(n => n !== R.curPage); }
+  dbPut('docs', rec).catch(() => {});
+  rerenderPages(R.pages.filter(p => before.has(p.n) !== shouldClean(p.n)));
+  paintClean();
+};
+let cleanT2;
+const cleanChanged = () => { saveS(); clearTimeout(cleanT2); cleanT2 = setTimeout(() => rerenderPages(R.pages.filter(p => shouldClean(p.n))), 250); };
+$('#cleanIn').oninput = e => { S.cleanT = +e.target.value; cleanChanged(); };
+$('#boldIn').oninput = e => { S.bold = +e.target.value; cleanChanged(); };
 
 /* ================= reading look: 5 tones + contrast/brightness ================= */
 const THEME_BASE = {
@@ -1268,9 +1419,10 @@ function openSheet(id) {
   closeSheets(false);
   if (id === 'notes') renderNotes();
   if (id === 'settings') { fillSettings(); paintEngineStatus(); }
+  if (id === 'cleanSheet') paintClean();
   $('#' + id).classList.add('open'); $('#scrim').classList.add('open');
 }
-function closeSheets(scrim = true) { ['settings', 'notes', 'iosSheet', 'viewSheet'].forEach(i => $('#' + i).classList.remove('open')); if (scrim) $('#scrim').classList.remove('open'); }
+function closeSheets(scrim = true) { ['settings', 'notes', 'iosSheet', 'viewSheet', 'cleanSheet'].forEach(i => $('#' + i).classList.remove('open')); if (scrim) $('#scrim').classList.remove('open'); }
 $$('[data-open]').forEach(b => b.onclick = () => openSheet(b.dataset.open));
 $$('[data-close]').forEach(b => b.onclick = () => closeSheets());
 $('#scrim').onclick = () => closeSheets();
