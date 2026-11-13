@@ -24,7 +24,7 @@
   --safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
   color-scheme:light;
 }
-body[data-theme="paper"]{--bg:#fdfcf8;--bg2:#fffefb;--card:#f5f2ea;--line:#e8e2d5;--tx:#2b2a26;--mut:#7a7466;--desk:#ebe6db}
+body[data-theme="paper"]{--bg:#faf1d6;--bg2:#fdf6e0;--card:#f2e6c4;--line:#e3d5ae;--tx:#3a3020;--mut:#7d6e4e;--desk:#e6d6a8;--acc:#9a6b12;--acc-soft:rgba(154,107,18,.12);--hl:rgba(154,107,18,.22);--hl2:rgba(154,107,18,.18)}
 body[data-theme="grey"]{--bg:#eef1f5;--bg2:#f6f8fa;--card:#e3e7ed;--line:#d3d9e1;--tx:#1f2937;--mut:#5f6b7c;--desk:#d6dbe3}
 body[data-theme="dim"]{--bg:#1d2430;--bg2:#232b38;--card:#2b3443;--line:rgba(255,255,255,.09);--tx:#e3e8f0;--mut:#93a1b5;--acc:#60a5fa;--acc-tx:#0b1220;--acc-soft:rgba(96,165,250,.14);--desk:#151a22;--hl:rgba(96,165,250,.30);--hl2:rgba(56,189,248,.28);--hlblend:normal;--shadow:0 2px 10px rgba(0,0,0,.4);color-scheme:dark}
 body[data-theme="night"]{--bg:#0c0e12;--bg2:#13161c;--card:#1a1e26;--line:rgba(255,255,255,.07);--tx:#c4cad3;--mut:#7a8392;--acc:#5b8def;--acc-tx:#06090f;--acc-soft:rgba(91,141,239,.13);--desk:#050608;--hl:rgba(91,141,239,.30);--hl2:rgba(56,189,248,.25);--hlblend:normal;--shadow:0 2px 10px rgba(0,0,0,.6);color-scheme:dark}
@@ -189,6 +189,19 @@ input[type=range]{accent-color:var(--acc);width:100%}
 .loading.show{display:grid}
 .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--acc);animation:sp .8s linear infinite;margin:0 auto 12px}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* paper tint: warm yellow page, ink stays dark */
+body[data-theme="paper"] .page::before{content:"";position:absolute;inset:0;background:#f2dfa4;mix-blend-mode:multiply;z-index:1;pointer-events:none}
+/* bookmarks */
+.page.bm::after{content:"";position:absolute;top:0;right:18px;width:22px;height:34px;background:var(--acc);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);z-index:3;pointer-events:none;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+#bmBtn.on{color:var(--acc)}
+#bmBtn.on svg path{fill:var(--acc)}
+.bmi{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:var(--card);margin-bottom:8px;cursor:pointer}
+.bmi .pgn{min-width:44px;text-align:center;font-weight:800;font-size:18px;color:var(--acc)}
+.bmi .pgn small{display:block;font-size:10px;font-weight:600;color:var(--mut)}
+.bmi .tx{flex:1;min-width:0}
+.bmi .tx b{display:block;font-size:14px}
+.bmi .tx span{display:block;font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:right;unicode-bidi:plaintext}
+.bmi.last{background:var(--acc-soft)}
 /* pull-tab / swipe sheets */
 .sheet.dragging{transition:none}
 .sheet .grip{cursor:grab;touch-action:none;padding:8px 0;margin:2px auto 0;background-clip:content-box;height:20px;width:60px}
@@ -249,7 +262,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
       <svg class="i" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>
     </button>
     <button class="iconbtn" data-open="notes" aria-label="מחברת" title="מחברת">
-      <svg class="i" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14a1 1 0 0 1-1 1H5zM9 4v17M12 9h4M12 13h4"/></svg>
     </button>
     <button class="iconbtn" data-open="settings" aria-label="הגדרות" title="הגדרות">
       <svg class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
@@ -286,6 +299,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     </button>
     <div id="docTitle"></div>
     <span class="chip offChip">אופליין</span>
+    <button class="iconbtn" id="bmBtn" data-open="bmSheet" aria-label="סימניות" title="סימניות"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button>
     <div class="pg"><input id="pgIn" type="number" inputmode="numeric" min="1"><span id="pgTot">/ 1</span></div>
   </header>
   <div id="tools">
@@ -300,7 +314,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <button class="tbtn" id="asBtn"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v14M6 11l6 6 6-6M5 21h14"/></svg>גלילה</button>
     <button class="tbtn" id="focusBtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>מסך מלא</button>
     <span class="tsep"></span>
-    <button class="tbtn" data-open="notes"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>מחברת</button>
+    <button class="tbtn" data-open="notes"><svg class="i" viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14a1 1 0 0 1-1 1H5zM9 4v17M12 9h4M12 13h4"/></svg>מחברת</button>
     <button class="tbtn" data-open="settings"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>שפות והגדרות</button>
   </div>
   <div id="readProg"><i></i></div>
@@ -414,7 +428,7 @@ input[type=range]{accent-color:var(--acc);width:100%}
     <span class="lbl">גוון</span>
     <div class="themes" id="themes">
       <button data-t="white"><i style="background:#fff;color:#1e293b"></i>לבן</button>
-      <button data-t="paper"><i style="background:#f6f1e4;color:#3b3527"></i>נייר</button>
+      <button data-t="paper"><i style="background:#f3e3b3;color:#3a3020"></i>נייר</button>
       <button data-t="grey"><i style="background:#d9dee6;color:#1f2937"></i>אפור</button>
       <button data-t="dim"><i style="background:#2b3443;color:#dfe5ee"></i>כהה</button>
       <button data-t="night"><i style="background:#0c0e12;color:#a9b0bb"></i>לילה</button>
@@ -459,6 +473,16 @@ input[type=range]{accent-color:var(--acc);width:100%}
         <button class="btn ghost sm" id="ocrStop" hidden>עצירה</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- =================== bookmarks =================== -->
+<div class="sheet" id="bmSheet">
+  <div class="grip"></div>
+  <div class="hd"><h3>סימניות</h3><button class="iconbtn" data-close aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="bd">
+    <button class="btn" id="bmAdd" style="width:100%;margin-bottom:12px"></button>
+    <div id="bmList"></div>
   </div>
 </div>
 
@@ -580,7 +604,7 @@ async function renderLibrary() {
     return `<div class="doc" data-id="${esc(d.id)}">
       <div class="ic">PDF</div>
       <div class="meta"><div class="t">${esc(d.name)}</div>
-      <div class="s">${d.pages ? `עמוד ${d.page} מתוך ${d.pages}` : 'טרם נפתח'} · ${(d.size / 1048576).toFixed(1)}MB</div>
+      <div class="s">${d.pages ? `עצרת בעמוד ${d.page} מתוך ${d.pages}` : 'טרם נפתח'}${(d.bookmarks || []).length ? ` · 🔖 ${d.bookmarks.length}` : ''} · ${(d.size / 1048576).toFixed(1)}MB</div>
       <div class="bar"><i style="width:${pct}%"></i></div></div>
       <button class="del" data-del="${esc(d.id)}">מחיקה</button></div>`;
   }).join('');
@@ -627,8 +651,12 @@ async function openDoc(rec) {
   buildPages();
   paintClean();
   loading(false);
-  const start = Math.min(Math.max(1, rec.page || 1), R.pdf.numPages);
-  requestAnimationFrame(() => goPage(start, false));
+  const start = Math.min(Math.max(1, (rec.pos && rec.pos.page) || rec.page || 1), R.pdf.numPages);
+  requestAnimationFrame(() => {
+    goPos(start, rec.pos ? rec.pos.rel : 0);
+    if (start > 1) toast(`ממשיך מעמוד ${start} — מהמקום שעצרת`, 2000);
+  });
+  paintBmBtn();
 }
 function calcScale() {
   const w = pagesEl.clientWidth - 16;
@@ -657,6 +685,7 @@ function buildPages() {
     for (const en of ents) if (en.isIntersecting) renderPage(R.pages[+en.target.dataset.n - 1]);
   }, { root: pagesEl, rootMargin: '120% 0px' });
   R.pages.forEach(p => R.io.observe(p.wrap));
+  if (R.rec) setTimeout(paintBmBtn);
 }
 function unrenderFar() {
   const keep = 6;
@@ -1045,9 +1074,61 @@ pagesEl.addEventListener('scroll', () => {
     if (cur !== R.curPage) { R.curPage = cur; unrenderFar(); }
     $('#pgIn').value = cur;
     const mx = pagesEl.scrollHeight - pagesEl.clientHeight; $('#readProg i').style.width = (mx > 0 ? Math.min(100, pagesEl.scrollTop / mx * 100) : 0) + '%';
-    if (R.rec && R.rec.page !== cur) { R.rec.page = cur; dbPut('docs', R.rec).catch(() => {}); }
+    if (R.rec) {
+      const p = R.pages[cur - 1], rel = p ? Math.max(0, (pagesEl.scrollTop - p.wrap.offsetTop) / p.wrap.offsetHeight) : 0;
+      R.rec.page = cur; R.rec.pos = { page: cur, rel: Math.round(rel * 1000) / 1000, at: Date.now() };
+      clearTimeout(R.saveT); R.saveT = setTimeout(() => dbPut('docs', R.rec).catch(() => {}), 600);
+      paintBmBtn();
+    }
   }, 140);
 }, { passive: true });
+function goPos(n, rel = 0, smooth = false) {
+  n = Math.max(1, Math.min(R.pages.length, n | 0));
+  const p = R.pages[n - 1]; if (!p) return;
+  R.curPage = n; $('#pgIn').value = n;
+  pagesEl.scrollTo({ top: p.wrap.offsetTop + rel * p.wrap.offsetHeight, behavior: smooth ? 'smooth' : 'auto' });
+}
+/* bookmarks */
+const curRel = () => { const p = R.pages[R.curPage - 1]; return p ? Math.max(0, (pagesEl.scrollTop - p.wrap.offsetTop) / p.wrap.offsetHeight) : 0; };
+function paintBmBtn() {
+  if (!R.rec) return;
+  const bms = R.rec.bookmarks || [];
+  $('#bmBtn').classList.toggle('on', bms.some(b => b.page === R.curPage));
+  R.pages.forEach(p => p.wrap.classList.toggle('bm', bms.some(b => b.page === p.n)));
+}
+function snippetAt(page, rel) {
+  const p = R.pages[page - 1];
+  if (!p || !p.text) return '';
+  const i = Math.floor(p.text.length * Math.min(.95, rel));
+  return p.text.slice(i, i + 90).replace(/\s+/g, ' ').trim();
+}
+function renderBookmarks() {
+  if (!R.rec) return;
+  const bms = (R.rec.bookmarks || []).slice().sort((a, b) => a.page - b.page);
+  const has = bms.some(b => b.page === R.curPage);
+  $('#bmAdd').textContent = has ? `הסרת הסימנייה מעמוד ${R.curPage}` : `🔖 סימנייה כאן — עמוד ${R.curPage}`;
+  $('#bmAdd').className = has ? 'btn ghost' : 'btn';
+  const pos = R.rec.pos;
+  const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+  let html = pos ? `<div class="bmi last" data-pg="${pos.page}" data-rel="${pos.rel}"><div class="pgn">${pos.page}<small>עמוד</small></div><div class="tx"><b>איפה שעצרתי</b><span>${esc(snippetAt(pos.page, pos.rel))}</span></div></div>` : '';
+  html += bms.map(b => `<div class="bmi" data-pg="${b.page}" data-rel="${b.rel}"><div class="pgn">${b.page}<small>עמוד</small></div><div class="tx"><b>${esc(b.label || 'סימנייה')} · ${fmt(b.at)}</b><span>${esc(b.snip || '')}</span></div><button class="del" data-bdel="${b.at}">מחיקה</button></div>`).join('');
+  $('#bmList').innerHTML = html || '<div class="empty">אין עדיין סימניות בספר הזה.</div>';
+}
+$('#bmAdd').onclick = () => {
+  if (!R.rec) return;
+  const bms = R.rec.bookmarks = R.rec.bookmarks || [];
+  const i = bms.findIndex(b => b.page === R.curPage);
+  if (i >= 0) { bms.splice(i, 1); toast('הסימנייה הוסרה'); }
+  else { const rel = curRel(); bms.push({ page: R.curPage, rel, at: Date.now(), snip: snippetAt(R.curPage, rel) }); toast(`סימנייה בעמוד ${R.curPage} 🔖`); }
+  dbPut('docs', R.rec).catch(() => {});
+  paintBmBtn(); renderBookmarks();
+};
+$('#bmList').addEventListener('click', e => {
+  const del = e.target.closest('[data-bdel]');
+  if (del) { e.stopPropagation(); R.rec.bookmarks = (R.rec.bookmarks || []).filter(b => String(b.at) !== del.dataset.bdel); dbPut('docs', R.rec).catch(() => {}); paintBmBtn(); renderBookmarks(); return; }
+  const it = e.target.closest('.bmi'); if (!it) return;
+  closeSheets(); goPos(+it.dataset.pg, +it.dataset.rel || 0, true);
+});
 function goPage(n, smooth = true) {
   n = Math.max(1, Math.min(R.pages.length, n | 0));
   const p = R.pages[n - 1]; if (!p) return;
@@ -1118,10 +1199,17 @@ pagesEl.addEventListener('wheel', e => {
   clearTimeout(wheelT);
   wheelT = setTimeout(() => { const k = wheelK; wheelK = 1; R.inner.style.transform = ''; setZoom(S.zoom * k, wheelAt); }, 220);
 }, { passive: false });
-let lastW = 0;
+let lastW = 0, lastLand = innerWidth > innerHeight;
 addEventListener('resize', () => {
   clearTimeout(window.__rz);
-  window.__rz = setTimeout(() => { if (R.pdf && $('#reader').classList.contains('show') && Math.abs(pagesEl.clientWidth - lastW) > 30) { lastW = pagesEl.clientWidth; setZoom(S.zoom); } }, 300);
+  window.__rz = setTimeout(() => {
+    if (!R.pdf || !$('#reader').classList.contains('show') || Math.abs(pagesEl.clientWidth - lastW) <= 30) return;
+    const land = innerWidth > innerHeight, turned = land !== lastLand;
+    lastW = pagesEl.clientWidth; lastLand = land;
+    // rotating the phone: snap the page back to fit the new screen width, keep the reading spot
+    setZoom(turned ? 1 : S.zoom);
+    pagesEl.scrollLeft = 0;
+  }, 250);
 });
 
 /* ================= scan cleanup (adaptive threshold → crisp black on white) ================= */
@@ -1327,7 +1415,7 @@ $('#ocrStop').onclick = () => { OCR.stop = true; if (R.rec) { R.rec.ocrAll = fal
 /* ================= reading look: 5 tones + contrast/brightness ================= */
 const THEME_BASE = {
   white: '',
-  paper: 'sepia(.22) saturate(.9)',
+  paper: 'sepia(.25) contrast(1.05)',
   grey: 'grayscale(.2) brightness(.9) contrast(.92)',
   dim: 'invert(.88) hue-rotate(180deg) contrast(.9)',
   night: 'invert(.93) hue-rotate(180deg) sepia(.12) brightness(.72)'
@@ -1655,7 +1743,7 @@ function swipeable(sheet, onDismiss, onOpen) {
   sheet.addEventListener('touchend', end); sheet.addEventListener('touchcancel', end);
 }
 swipeable($('#tsheet'), full => { if (full) { closeT(); R.cur = null; } else peekT(); }, openT);
-['settings', 'notes', 'viewSheet', 'cleanSheet', 'iosSheet'].forEach(id => swipeable($('#' + id), () => closeSheets()));
+['settings', 'notes', 'viewSheet', 'cleanSheet', 'iosSheet', 'bmSheet'].forEach(id => swipeable($('#' + id), () => closeSheets()));
 async function showTranslation(text) {
   const my = ++tReq; lastAsked = text;
   $('#tAlts').innerHTML = '';
@@ -1764,9 +1852,10 @@ function openSheet(id) {
   if (id === 'notes') renderNotes();
   if (id === 'settings') { fillSettings(); paintEngineStatus(); }
   if (id === 'cleanSheet') paintClean();
+  if (id === 'bmSheet') renderBookmarks();
   $('#' + id).classList.add('open'); $('#scrim').classList.add('open');
 }
-function closeSheets(scrim = true) { ['settings', 'notes', 'iosSheet', 'viewSheet', 'cleanSheet'].forEach(i => $('#' + i).classList.remove('open')); if (scrim) $('#scrim').classList.remove('open'); }
+function closeSheets(scrim = true) { ['settings', 'notes', 'iosSheet', 'viewSheet', 'cleanSheet', 'bmSheet'].forEach(i => $('#' + i).classList.remove('open')); if (scrim) $('#scrim').classList.remove('open'); }
 $$('[data-open]').forEach(b => b.onclick = () => openSheet(b.dataset.open));
 $$('[data-close]').forEach(b => b.onclick = () => closeSheets());
 $('#scrim').onclick = () => closeSheets();
