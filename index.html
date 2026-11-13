@@ -129,6 +129,8 @@ body.tsheet-open #asBar{bottom:calc(52vh + 10px)}
 .sheet .hd h3{margin:0;font-size:16.5px;flex:1}
 .sheet .bd{overflow:auto;padding:0 16px 18px}
 #tsheet{max-height:52vh;z-index:45}
+#tClose{background:var(--card);color:var(--tx);width:42px;height:42px;border-radius:12px}
+#tClose .i{width:22px;height:22px;stroke-width:2.4}
 #tsheet .src{font-size:14px;color:var(--mut);line-height:1.55;direction:auto;unicode-bidi:plaintext;text-align:start;padding:10px 12px;background:var(--card);border-radius:12px;max-height:22vh;overflow:auto}
 #tsheet .out{font-size:var(--tfs);line-height:1.6;margin:12px 2px 6px;min-height:1.6em;white-space:pre-wrap;color:var(--tx)}
 #tsheet .out.err{color:var(--bad);font-size:15px}
@@ -217,7 +219,9 @@ body[data-theme="paper"] .page::before{content:"";position:absolute;inset:0;back
 #bubble::after{content:"";position:absolute;left:calc(var(--ax,50%) - 8px);width:14px;height:14px;background:var(--bg2);border:1px solid var(--line);transform:rotate(45deg)}
 #bubble.up::after{bottom:-8px;border-top:0;border-left:0}
 #bubble.down::after{top:-8px;border-bottom:0;border-right:0}
-#bubble .bw{font-size:12.5px;color:var(--mut);direction:auto;unicode-bidi:plaintext;text-align:start}
+#bubble .bx{position:absolute;top:4px;left:4px;width:32px;height:32px;border:0;border-radius:10px;background:var(--card);color:var(--tx);display:grid;place-items:center}
+#bubble .bx .i{width:18px;height:18px}
+#bubble .bw{padding-left:36px;font-size:12.5px;color:var(--mut);direction:auto;unicode-bidi:plaintext;text-align:start}
 #bubble .bt{font-size:calc(var(--tfs) + 1px);font-weight:650;line-height:1.4;margin:3px 0 4px}
 #bubble .alt{font-size:13px;margin:0 0 4px}
 #bubble .brow{display:flex;gap:4px;align-items:center;margin-top:4px;border-top:1px solid var(--line);padding-top:6px}
@@ -359,6 +363,7 @@ body[data-theme="paper"] .page::before{content:"";position:absolute;inset:0;back
 </div>
 
 <div id="bubble" dir="rtl">
+  <button class="bx" id="bClose" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <div class="bw" id="bWord"></div>
   <div class="bt" id="bTr"></div>
   <div id="bAlts"></div>
@@ -983,6 +988,7 @@ async function showWord(p, off) {
   }
   placeBubble(hlEl.getBoundingClientRect());
 }
+$('#bClose').onclick = e => { e.stopPropagation(); hideBubble(); clearHL(); R.cur = null; };
 $('#bSent').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'sentence'); };
 $('#bPara').onclick = () => { const c = R.cur; if (c) selectSentence(c.p, c.s, false, 'para'); };
 $('#bSpeak').onclick = () => { if (bRes) speak(bRes.src); };
